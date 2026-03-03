@@ -8,7 +8,8 @@
 
 ## Связи таблиц
 
-![ER Diagram](docs/ER-diagram.png)
+<img width="758" height="603" alt=" ER-diagram" src="https://github.com/user-attachments/assets/aac5c160-384e-4b68-84e5-a70feaea4e2b" />
+
 
 ---
 
