@@ -33,6 +33,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TransactionServiceImpl implements TransactionService {
 
+    private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found ";
+
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final BudgetRepository budgetRepository;
@@ -43,19 +45,25 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public TransactionResponse getTransactionById(Long id) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found " + id));
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
         return transactionMapper.toResponse(transaction, true, true);
     }
 
     @Override
     public List<TransactionResponse> getAllTransactions(boolean withEntityGraph, boolean includeTransfers) {
-        List<Transaction> transactions = withEntityGraph
-                ? (includeTransfers
-                        ? transactionRepository.findAllTransactionsWithEntityGraph()
-                        : transactionRepository.findAllTransactionsWithoutTransfersWithEntityGraph())
-                : (includeTransfers
-                        ? transactionRepository.findAllTransactions()
-                        : transactionRepository.findAllTransactionsWithoutTransfers());
+        List<Transaction> transactions;
+        if (withEntityGraph) {
+            if (includeTransfers) {
+                transactions = transactionRepository.findAllTransactionsWithEntityGraph();
+            } else {
+                transactions = transactionRepository.findAllTransactionsWithoutTransfersWithEntityGraph();
+            }
+        } else if (includeTransfers) {
+            transactions = transactionRepository.findAllTransactions();
+        } else {
+            transactions = transactionRepository.findAllTransactionsWithoutTransfers();
+        }
         return toResponses(transactions);
     }
 
@@ -100,7 +108,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found " + id));
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
@@ -142,7 +151,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public void deleteTransaction(Long id) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found " + id));
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());

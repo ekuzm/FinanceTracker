@@ -39,9 +39,6 @@ public class Tag {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "normalized_name", nullable = false, length = 50)
-    private String normalizedName;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

@@ -29,8 +29,7 @@ public class TagMapper {
         }
 
         Tag tag = new Tag();
-        tag.setName(request.getName().trim());
-        tag.setNormalizedName(normalizeName(request.getName()));
+        tag.setName(normalizeName(request.getName()));
         tag.setUser(user);
         return tag;
     }

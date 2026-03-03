@@ -27,6 +27,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class BudgetServiceImpl implements BudgetService {
 
+    private static final String BUDGET_NOT_FOUND_MESSAGE = "Budget not found ";
+
     private final BudgetRepository budgetRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -35,7 +37,7 @@ public class BudgetServiceImpl implements BudgetService {
     @Override
     public BudgetResponse getBudgetById(Long id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
         return toResponse(budget, true);
     }
 
@@ -60,7 +62,7 @@ public class BudgetServiceImpl implements BudgetService {
     @Transactional
     public BudgetResponse updateBudget(Long id, BudgetRequest request) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
         if (request.getName() != null) {
             budget.setName(request.getName());
         }
@@ -103,7 +105,7 @@ public class BudgetServiceImpl implements BudgetService {
     @Transactional
     public void deleteBudget(Long id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
         if (transactionRepository.existsByBudgetId(id)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,

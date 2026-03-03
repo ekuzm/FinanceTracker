@@ -21,7 +21,7 @@
   - заменяет старую `Category`;
   - принадлежит пользователю (`user`);
   - связь с `Transaction` — `Many-to-Many`;
-  - уникальность имени обеспечивается через `normalizedName` в рамках пользователя.
+  - имя хранится в `lowercase`, уникальность обеспечивается по паре (`user_id`, `name`).
 - `Transaction`:
   - поля: `occurredAt` (`LocalDateTime`), `amount` (`BigDecimal`), `description`, `type` (`INCOME`/`EXPENSE`);
   - обязательные связи: `user`, `account`;
@@ -48,7 +48,8 @@
 Особенности списка транзакций:
 - по умолчанию `GET /api/v1/transactions` скрывает transfer-записи;
 - для включения переводов используйте `includeTransfers=true`;
-- для демонстрации подгрузки связей доступен `withEntityGraph=true`.
+- для демонстрации подгрузки связей доступен `withEntityGraph=true`;
+- фильтр по датам использует `startDate` и `endDate` одновременно (`YYYY-MM-DD`).
 
 ---
 
@@ -82,24 +83,25 @@ docker compose down
 
 ---
 
-## Проверка API через Makefile
+## Быстрая проверка API
 
-В проекте есть smoke/happy-path проверка API через `curl` + `jq`:
-
-```bash
-make api-check
-```
-
-Доступные команды:
+Примеры запросов после запуска стека:
 
 ```bash
-make help
-make api-up
-make api-wait
-make api-check
-make api-check-keep
-make api-down
+curl -s http://localhost:8080/api/v1/users
 ```
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alex","email":"alex@example.com"}'
+```
+
+```bash
+curl -s "http://localhost:8080/api/v1/transactions?includeTransfers=true"
+```
+
+Детальные контракты request/response и бизнес-ограничения описаны в [docs/api.md](docs/api.md).
 
 ---
 

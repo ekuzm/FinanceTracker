@@ -31,6 +31,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
 
+    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found ";
+
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -39,7 +41,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountResponse getAccountById(Long id) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
         return accountMapper.toResponse(account);
     }
 
@@ -61,7 +63,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public AccountResponse updateAccount(Long id, AccountRequest request) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
         if (request.getName() != null) {
             account.setName(request.getName());
         }
@@ -91,7 +93,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public void deleteAccount(Long id) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
         if (transactionRepository.existsByAccountId(id)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -166,7 +168,8 @@ public class AccountServiceImpl implements AccountService {
 
     private Account getAccount(Long accountId) {
         return accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found " + accountId));
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + accountId));
     }
 
     private void validateTransferOwnership(User user, Account fromAccount, Account toAccount) {

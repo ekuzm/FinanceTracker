@@ -46,7 +46,7 @@ public class TagServiceImpl implements TagService {
     public TagResponse createTag(TagRequest request) {
         User user = getUser(request.getUserId());
         String normalizedName = tagMapper.normalizeName(request.getName());
-        if (tagRepository.existsByUserIdAndNormalizedName(user.getId(), normalizedName)) {
+        if (tagRepository.existsByUserIdAndName(user.getId(), normalizedName)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Tag with name '" + request.getName() + "' already exists for this user");
@@ -66,13 +66,12 @@ public class TagServiceImpl implements TagService {
         }
         if (request.getName() != null) {
             String normalizedName = tagMapper.normalizeName(request.getName());
-            if (tagRepository.existsByUserIdAndNormalizedNameAndIdNot(tag.getUser().getId(), normalizedName, id)) {
+            if (tagRepository.existsByUserIdAndNameAndIdNot(tag.getUser().getId(), normalizedName, id)) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
                         "Tag with name '" + request.getName() + "' already exists for this user");
             }
-            tag.setName(request.getName().trim());
-            tag.setNormalizedName(normalizedName);
+            tag.setName(normalizedName);
         }
         Tag saved = tagRepository.save(tag);
         return tagMapper.toResponse(saved);

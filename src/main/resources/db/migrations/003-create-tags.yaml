@@ -20,11 +20,6 @@ databaseChangeLog:
             constraints:
               nullable: false
         - column:
-            name: normalized_name
-            type: VARCHAR(50)
-            constraints:
-              nullable: false
-        - column:
             name: user_id
             type: BIGINT
             constraints:
@@ -39,5 +34,7 @@ databaseChangeLog:
         onUpdate: CASCADE
     - addUniqueConstraint:
         tableName: tags
-        columnNames: user_id, normalized_name
-        constraintName: uk_tags_user_normalized_name
+        columnNames: user_id, name
+        constraintName: uk_tags_user_name
+    - sql:
+        sql: ALTER TABLE tags ADD CONSTRAINT ck_tags_name_lowercase CHECK (name = lower(trim(name)))
