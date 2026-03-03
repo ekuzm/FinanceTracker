@@ -1,35 +1,35 @@
 package com.finance.tracker.mapper;
 
 import com.finance.tracker.domain.Budget;
-import com.finance.tracker.domain.Category;
 import com.finance.tracker.domain.Transaction;
+import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
 import com.finance.tracker.dto.response.BudgetResponse;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.math.BigDecimal;
 
 @Component
 public class BudgetMapper {
 
-    public BudgetResponse toResponse(Budget budget) {
-        return toResponse(budget, true);
-    }
-
-    public BudgetResponse toResponse(Budget budget, boolean includeTransactions) {
+    public BudgetResponse toResponse(Budget budget, BigDecimal spent, boolean includeTransactions) {
         if (budget == null) {
             return null;
         }
+
+        BigDecimal safeSpent = spent == null ? BigDecimal.ZERO : spent;
+        BigDecimal remainingAmount = budget.getLimitAmount().subtract(safeSpent);
 
         BudgetResponse response = new BudgetResponse();
         response.setId(budget.getId());
         response.setName(budget.getName());
         response.setLimitAmount(budget.getLimitAmount());
-        response.setSpent(budget.getSpent());
-
-        response.setCategoryIds(
-                budget.getCategories() != null ? budget.getCategories().stream().map(Category::getId).toList() : null);
+        response.setStartDate(budget.getStartDate());
+        response.setEndDate(budget.getEndDate());
+        response.setUserId(budget.getUser() != null ? budget.getUser().getId() : null);
+        response.setSpent(safeSpent);
+        response.setRemainingAmount(remainingAmount);
+        response.setOverLimit(remainingAmount.signum() < 0);
 
         if (includeTransactions) {
             response.setTransactionIds(
@@ -43,7 +43,7 @@ public class BudgetMapper {
         return response;
     }
 
-    public Budget fromRequest(BudgetRequest request, List<Category> categories) {
+    public Budget fromRequest(BudgetRequest request, User user) {
         if (request == null) {
             return null;
         }
@@ -51,8 +51,9 @@ public class BudgetMapper {
         Budget budget = new Budget();
         budget.setName(request.getName());
         budget.setLimitAmount(request.getLimitAmount());
-        budget.setSpent(request.getSpent());
-        budget.setCategories(categories != null ? new ArrayList<>(categories) : new ArrayList<>());
+        budget.setStartDate(request.getStartDate());
+        budget.setEndDate(request.getEndDate());
+        budget.setUser(user);
 
         return budget;
     }
@@ -65,10 +66,9 @@ public class BudgetMapper {
         BudgetRequest request = new BudgetRequest();
         request.setName(budget.getName());
         request.setLimitAmount(budget.getLimitAmount());
-        request.setSpent(budget.getSpent());
-
-        request.setCategoryIds(
-                budget.getCategories() != null ? budget.getCategories().stream().map(Category::getId).toList() : null);
+        request.setStartDate(budget.getStartDate());
+        request.setEndDate(budget.getEndDate());
+        request.setUserId(budget.getUser() != null ? budget.getUser().getId() : null);
 
         return request;
     }

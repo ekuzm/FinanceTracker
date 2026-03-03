@@ -1,6 +1,7 @@
 package com.finance.tracker.controller;
 
 import com.finance.tracker.dto.request.AccountRequest;
+import com.finance.tracker.dto.request.TransferRequest;
 import com.finance.tracker.dto.response.AccountResponse;
 import com.finance.tracker.service.AccountService;
 
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -51,6 +53,19 @@ public class AccountController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
         service.deleteAccount(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<Void> transfer(
+            @Valid @RequestBody TransferRequest request,
+            @RequestParam(defaultValue = "true") boolean transactional,
+            @RequestParam(defaultValue = "false") boolean failAfterDebit) {
+        if (transactional) {
+            service.transferTx(request, failAfterDebit);
+        } else {
+            service.transferNoTx(request, failAfterDebit);
+        }
         return ResponseEntity.noContent().build();
     }
 }

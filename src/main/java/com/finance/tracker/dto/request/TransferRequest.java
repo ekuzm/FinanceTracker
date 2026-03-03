@@ -1,12 +1,7 @@
 package com.finance.tracker.dto.request;
 
-import com.finance.tracker.domain.AccountType;
-
-import java.math.BigDecimal;
-
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -14,24 +9,33 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountRequest {
-
-    @NotBlank
-    @Size(min = 3, max = 50)
-    private String name;
-
-    @NotNull
-    private AccountType type;
-
-    @NotNull
-    @DecimalMin(value = "0.00")
-    private BigDecimal balance;
+public class TransferRequest {
 
     @NotNull
     @Min(1)
     private Long userId;
+
+    @NotNull
+    @Min(1)
+    private Long fromAccountId;
+
+    @NotNull
+    @Min(1)
+    private Long toAccountId;
+
+    @NotNull
+    @DecimalMin(value = "0.01")
+    private BigDecimal amount;
+
+    private LocalDateTime occurredAt;
+
+    @Size(max = 255)
+    private String description;
 }

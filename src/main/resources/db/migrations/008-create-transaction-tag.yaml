@@ -1,0 +1,38 @@
+databaseChangeLog:
+  - changeSet:
+        id: 008-create-transaction-tag
+        author: ekuzm
+        changes:
+          - createTable:
+                tableName: transaction_tag
+                columns:
+                  - column:
+                        name: transaction_id
+                        type: BIGINT
+                        constraints:
+                            nullable: false
+                  - column:
+                        name: tag_id
+                        type: BIGINT
+                        constraints:
+                            nullable: false
+          - addPrimaryKey:
+                tableName: transaction_tag
+                columnNames: transaction_id, tag_id
+                constraintName: pk_transaction_tag
+          - addForeignKeyConstraint:
+                baseTableName: transaction_tag
+                baseColumnNames: transaction_id
+                referencedTableName: transactions
+                referencedColumnNames: id
+                constraintName: fk_transaction_tag_transaction
+                onDelete: CASCADE
+                onUpdate: CASCADE
+          - addForeignKeyConstraint:
+                baseTableName: transaction_tag
+                baseColumnNames: tag_id
+                referencedTableName: tags
+                referencedColumnNames: id
+                constraintName: fk_transaction_tag_tag
+                onDelete: CASCADE
+                onUpdate: CASCADE

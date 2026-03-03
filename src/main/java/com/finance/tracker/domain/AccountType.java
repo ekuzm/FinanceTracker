@@ -4,7 +4,6 @@ public enum AccountType {
     CHECKING,
     SAVINGS,
     CREDIT,
-    DEBIT,
     INVESTMENT,
     CASH
 }

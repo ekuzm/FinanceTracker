@@ -1,14 +1,18 @@
 package com.finance.tracker.service.impl;
 
 import com.finance.tracker.domain.Budget;
-import com.finance.tracker.domain.Category;
+import com.finance.tracker.domain.TransactionType;
+import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
 import com.finance.tracker.dto.response.BudgetResponse;
 import com.finance.tracker.mapper.BudgetMapper;
 import com.finance.tracker.repository.BudgetRepository;
-import com.finance.tracker.repository.CategoryRepository;
+import com.finance.tracker.repository.TransactionRepository;
+import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.BudgetService;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -24,29 +28,32 @@ import org.springframework.web.server.ResponseStatusException;
 public class BudgetServiceImpl implements BudgetService {
 
     private final BudgetRepository budgetRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
     private final BudgetMapper budgetMapper;
 
     @Override
     public BudgetResponse getBudgetById(Long id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id));
-        return budgetMapper.toResponse(budget);
+        return toResponse(budget, true);
     }
 
     @Override
     public List<BudgetResponse> getAllBudgets() {
-        return toResponses(budgetRepository.findAll(), false);
+        return budgetRepository.findAll().stream()
+                .map(budget -> toResponse(budget, false))
+                .toList();
     }
 
     @Override
     @Transactional
     public BudgetResponse createBudget(BudgetRequest request) {
-        List<Category> categories = getCategoriesIfPresent(request.getCategoryIds());
-        Budget budget = budgetMapper.fromRequest(request, categories);
-        linkBudgetAndCategories(budget, categories);
+        validateDateRange(request.getStartDate(), request.getEndDate());
+        User user = getUser(request.getUserId());
+        Budget budget = budgetMapper.fromRequest(request, user);
         Budget saved = budgetRepository.save(budget);
-        return budgetMapper.toResponse(saved);
+        return toResponse(saved, true);
     }
 
     @Override
@@ -60,56 +67,79 @@ public class BudgetServiceImpl implements BudgetService {
         if (request.getLimitAmount() != null) {
             budget.setLimitAmount(request.getLimitAmount());
         }
-        if (request.getSpent() != null) {
-            budget.setSpent(request.getSpent());
+        if (request.getStartDate() != null) {
+            budget.setStartDate(request.getStartDate());
         }
-        if (request.getCategoryIds() != null) {
-            List<Category> categories = getCategories(request.getCategoryIds());
-            linkBudgetAndCategories(budget, categories);
+        if (request.getEndDate() != null) {
+            budget.setEndDate(request.getEndDate());
         }
+        validateDateRange(budget.getStartDate(), budget.getEndDate());
+
+        if (request.getUserId() != null) {
+            User newOwner = getUser(request.getUserId());
+            Long currentOwnerId = budget.getUser() != null ? budget.getUser().getId() : null;
+            if (currentOwnerId != null
+                    && !currentOwnerId.equals(newOwner.getId())
+                    && transactionRepository.existsByBudgetId(budget.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Cannot change budget owner while budget has transactions");
+            }
+            budget.setUser(newOwner);
+        }
+
+        if (transactionRepository.existsOutsideBudgetPeriod(
+                budget.getId(), atDayStart(budget.getStartDate()), atDayEnd(budget.getEndDate()))) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot update budget period: some transactions are outside new date range");
+        }
+
         Budget saved = budgetRepository.save(budget);
-        return budgetMapper.toResponse(saved);
+        return toResponse(saved, true);
     }
 
     @Override
     @Transactional
     public void deleteBudget(Long id) {
-        if (!budgetRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id);
+        Budget budget = budgetRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found " + id));
+        if (transactionRepository.existsByBudgetId(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete budget with existing transactions: " + id);
         }
-        budgetRepository.deleteById(id);
+        budgetRepository.delete(budget);
     }
 
-    private List<Category> getCategories(List<Long> categoryIds) {
-        List<Category> categories = categoryRepository.findAllById(categoryIds);
-        if (categories.size() != categoryIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some categories not found");
-        }
-        return categories;
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId));
     }
 
-    private List<Category> getCategoriesIfPresent(List<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return List.of();
+    private void validateDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate and endDate are required");
         }
-        return getCategories(categoryIds);
-    }
-
-    private void linkBudgetAndCategories(Budget budget, List<Category> categories) {
-        for (Category currentCategory : budget.getCategories()) {
-            currentCategory.getBudgets().remove(budget);
-        }
-
-        budget.getCategories().clear();
-        for (Category category : categories) {
-            budget.getCategories().add(category);
-            if (!category.getBudgets().contains(budget)) {
-                category.getBudgets().add(budget);
-            }
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate must be <= endDate");
         }
     }
 
-    private List<BudgetResponse> toResponses(List<Budget> budgets, boolean includeTransactions) {
-        return budgets.stream().map(budget -> budgetMapper.toResponse(budget, includeTransactions)).toList();
+    private LocalDateTime atDayStart(java.time.LocalDate date) {
+        return date.atStartOfDay();
+    }
+
+    private LocalDateTime atDayEnd(java.time.LocalDate date) {
+        return date.atTime(23, 59, 59, 999_999_999);
+    }
+
+    private BudgetResponse toResponse(Budget budget, boolean includeTransactions) {
+        BigDecimal spent = transactionRepository.sumAmountForBudgetAndTypeInPeriod(
+                budget.getId(),
+                TransactionType.EXPENSE,
+                atDayStart(budget.getStartDate()),
+                atDayEnd(budget.getEndDate()));
+        return budgetMapper.toResponse(budget, spent, includeTransactions);
     }
 }

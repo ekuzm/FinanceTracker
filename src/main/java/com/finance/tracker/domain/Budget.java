@@ -8,8 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -19,6 +18,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +29,7 @@ import java.util.List;
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(exclude = { "categories", "transactions" })
+@ToString(exclude = { "user", "transactions" })
 @Table(name = "budgets")
 public class Budget {
 
@@ -41,20 +42,19 @@ public class Budget {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "limit_amount", nullable = false)
-    private Double limitAmount;
+    @Column(name = "limit_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal limitAmount;
 
-    @Column(name = "spent", nullable = false)
-    private Double spent;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "budget_category", 
-        joinColumns = @JoinColumn(name = "budget_id"), 
-        inverseJoinColumns = @JoinColumn(name = "category_id"))
-    private List<Category> categories = new ArrayList<>();
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Transaction> transactions = new ArrayList<>();
-
 }

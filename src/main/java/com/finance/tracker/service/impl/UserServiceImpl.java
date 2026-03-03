@@ -1,33 +1,22 @@
 package com.finance.tracker.service.impl;
 
 import com.finance.tracker.domain.Account;
-import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.Transaction;
 import com.finance.tracker.domain.User;
-import com.finance.tracker.dto.request.AccountRequest;
-import com.finance.tracker.dto.request.TransactionRequest;
 import com.finance.tracker.dto.request.UserRequest;
-import com.finance.tracker.dto.request.UserWithAccountsAndTransactionsCreateRequest;
 import com.finance.tracker.dto.response.UserResponse;
-import com.finance.tracker.mapper.AccountMapper;
-import com.finance.tracker.mapper.TransactionMapper;
 import com.finance.tracker.mapper.UserMapper;
 import com.finance.tracker.repository.AccountRepository;
-import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.TransactionRepository;
 import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.UserService;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -39,10 +28,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
-    private final BudgetRepository budgetRepository;
     private final UserMapper userMapper;
-    private final AccountMapper accountMapper;
-    private final TransactionMapper transactionMapper;
 
     @Override
     public UserResponse getUserById(Long id) {
@@ -165,65 +151,5 @@ public class UserServiceImpl implements UserService {
                         "Transaction " + transaction.getId() + " already belongs to another user");
             }
         }
-    }
-
-    private UserResponse createUserWithAccountsAndTransactions(
-            UserWithAccountsAndTransactionsCreateRequest request) {
-        Map<Long, Budget> budgetsById = getBudgetsForTransactions(request.getTransactions());
-
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        User savedUser = userRepository.save(user);
-
-        for (AccountRequest accountRequest : request.getAccounts()) {
-            Account account = accountMapper.fromRequest(accountRequest);
-            account.setUser(savedUser);
-            savedUser.getAccounts().add(account);
-            accountRepository.save(account);
-        }
-
-        if (request.isFailAfterAccounts()) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Forced error right after all accounts were saved");
-        }
-
-        for (TransactionRequest transactionRequest : request.getTransactions()) {
-            Budget budget = budgetsById.get(transactionRequest.getBudgetId());
-            Transaction transaction = transactionMapper.fromRequest(transactionRequest, budget);
-            transaction.setUser(savedUser);
-            savedUser.getTransactions().add(transaction);
-            transactionRepository.save(transaction);
-        }
-
-        return userMapper.toResponse(savedUser);
-    }
-
-    private Map<Long, Budget> getBudgetsForTransactions(List<TransactionRequest> transactions) {
-        Set<Long> budgetIds = transactions.stream()
-                .map(TransactionRequest::getBudgetId)
-                .collect(Collectors.toSet());
-
-        List<Budget> budgets = budgetRepository.findAllById(budgetIds);
-        if (budgets.size() != budgetIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some budgets not found");
-        }
-
-        return budgets.stream().collect(Collectors.toMap(Budget::getId, budget -> budget));
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public UserResponse createUserWithAccountsAndTransactionsNoTx(
-            UserWithAccountsAndTransactionsCreateRequest request) {
-        return createUserWithAccountsAndTransactions(request);
-    }
-
-    @Override
-    @Transactional
-    public UserResponse createUserWithAccountsAndTransactionsTx(
-            UserWithAccountsAndTransactionsCreateRequest request) {
-        return createUserWithAccountsAndTransactions(request);
     }
 }

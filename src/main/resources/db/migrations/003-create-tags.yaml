@@ -1,10 +1,10 @@
 databaseChangeLog:
 - changeSet:
-    id: 002-create-budgets
+    id: 003-create-tags
     author: ekuzm
     changes:
     - createTable:
-        tableName: budgets
+        tableName: tags
         columns:
         - column:
             name: id
@@ -12,7 +12,7 @@ databaseChangeLog:
             autoIncrement: true
             constraints:
               primaryKey: true
-              primaryKeyName: pk_budgets
+              primaryKeyName: pk_tags
               nullable: false
         - column:
             name: name
@@ -20,18 +20,8 @@ databaseChangeLog:
             constraints:
               nullable: false
         - column:
-            name: limit_amount
-            type: NUMERIC(19,2)
-            constraints:
-              nullable: false
-        - column:
-            name: start_date
-            type: DATE
-            constraints:
-              nullable: false
-        - column:
-            name: end_date
-            type: DATE
+            name: normalized_name
+            type: VARCHAR(50)
             constraints:
               nullable: false
         - column:
@@ -40,16 +30,14 @@ databaseChangeLog:
             constraints:
               nullable: false
     - addForeignKeyConstraint:
-        baseTableName: budgets
+        baseTableName: tags
         baseColumnNames: user_id
         referencedTableName: users
         referencedColumnNames: id
-        constraintName: fk_budgets_user
+        constraintName: fk_tags_user
         onDelete: CASCADE
         onUpdate: CASCADE
     - addUniqueConstraint:
-        tableName: budgets
-        columnNames: id, user_id
-        constraintName: uk_budgets_id_user
-    - sql:
-        sql: ALTER TABLE budgets ADD CONSTRAINT ck_budgets_date_range CHECK (start_date <= end_date)
+        tableName: tags
+        columnNames: user_id, normalized_name
+        constraintName: uk_tags_user_normalized_name

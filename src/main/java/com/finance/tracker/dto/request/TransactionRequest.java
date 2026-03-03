@@ -1,12 +1,15 @@
 package com.finance.tracker.dto.request;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMin;
+import com.finance.tracker.domain.TransactionType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,21 +21,31 @@ import lombok.Setter;
 @AllArgsConstructor
 public class TransactionRequest {
 
-    @FutureOrPresent
-    private LocalDate date;
+    @NotNull
+    private LocalDateTime occurredAt;
+
+    @NotNull
+    @DecimalMin(value = "0.01")
+    private BigDecimal amount;
+
+    @NotBlank
+    @Size(min = 3, max = 255)
+    private String description;
+
+    @NotNull
+    private TransactionType type;
 
     @NotNull
     @Positive
-    private Double amount;
+    private Long userId;
 
-    @NotBlank
-    @Size(min = 3, max = 50)
-    private String description;
+    @NotNull
+    @Positive
+    private Long accountId;
 
     @NotNull
     @Positive
     private Long budgetId;
 
-    @Positive
-    private Long userId;
+    private List<Long> tagIds;
 }
