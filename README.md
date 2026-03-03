@@ -6,28 +6,9 @@
 
 ---
 
-## Актуальные сущности
+## Связи таблиц
 
-- `User`:
-  - базовая сущность владельца данных;
-  - связи `1:N` с `Account`, `Budget`, `Transaction`, `Tag`.
-- `Account`:
-  - поля: `name`, `type`, `balance`, `user`;
-  - используется для обычных транзакций и transfer-операций.
-- `Budget`:
-  - поля: `name`, `limitAmount`, `startDate`, `endDate`, `user`;
-  - поле `spent` не хранится в БД и вычисляется из транзакций.
-- `Tag`:
-  - заменяет старую `Category`;
-  - принадлежит пользователю (`user`);
-  - связь с `Transaction` — `Many-to-Many`;
-  - имя хранится в `lowercase`, уникальность обеспечивается по паре (`user_id`, `name`).
-- `Transaction`:
-  - поля: `occurredAt` (`LocalDateTime`), `amount` (`BigDecimal`), `description`, `type` (`INCOME`/`EXPENSE`);
-  - обязательные связи: `user`, `account`;
-  - `budget` обязателен для обычных операций и `null` для transfer;
-  - `transferId` (`UUID`) связывает пару транзакций перевода;
-  - теги (`tagIds`) доступны только для обычных операций.
+- ![ER Diagram](docs/ER-diagram.png)
 
 ---
 
@@ -36,6 +17,7 @@
 Полная документация: [docs/api.md](docs/api.md)
 
 Основные группы endpoint'ов:
+
 - `/api/v1/users`
 - `/api/v1/accounts`
 - `/api/v1/budgets`
@@ -43,9 +25,11 @@
 - `/api/v1/transactions`
 
 Перевод между счетами:
+
 - `POST /api/v1/accounts/transfer?transactional=true|false&failAfterDebit=true|false`
 
 Особенности списка транзакций:
+
 - по умолчанию `GET /api/v1/transactions` скрывает transfer-записи;
 - для включения переводов используйте `includeTransfers=true`;
 - для демонстрации подгрузки связей доступен `withEntityGraph=true`;
