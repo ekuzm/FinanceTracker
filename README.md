@@ -14,7 +14,7 @@
 
 ## API
 
-Полная документация: [docs/api.md](docs/api.md)
+Полная документация: [/docs/api.md](docs/api.md)
 
 Основные группы endpoint'ов:
 
