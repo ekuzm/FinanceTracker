@@ -8,7 +8,7 @@
 
 ## Связи таблиц
 
-- ![ER Diagram](docs/ER-diagram.png)
+![ER Diagram](./docs/ER-diagram.png)
 
 ---
 
