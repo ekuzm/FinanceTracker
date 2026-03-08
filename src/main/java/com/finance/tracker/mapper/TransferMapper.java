@@ -21,12 +21,8 @@ public class TransferMapper {
         Transaction expense = findByType(transfer, TransactionType.EXPENSE);
         Transaction income = findByType(transfer, TransactionType.INCOME);
 
-        BigDecimal amount = expense != null
-                ? expense.getAmount()
-                : income != null ? income.getAmount() : null;
-        LocalDateTime occurredAt = expense != null
-                ? expense.getOccurredAt()
-                : income != null ? income.getOccurredAt() : null;
+        BigDecimal amount = resolveAmount(expense, income);
+        LocalDateTime occurredAt = resolveOccurredAt(expense, income);
 
         TransferResponse response = new TransferResponse();
         response.setId(transfer.getId());
@@ -48,5 +44,25 @@ public class TransferMapper {
                 .filter(transaction -> transaction.getType() == type)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private BigDecimal resolveAmount(Transaction expense, Transaction income) {
+        if (expense != null) {
+            return expense.getAmount();
+        }
+        if (income != null) {
+            return income.getAmount();
+        }
+        return null;
+    }
+
+    private LocalDateTime resolveOccurredAt(Transaction expense, Transaction income) {
+        if (expense != null) {
+            return expense.getOccurredAt();
+        }
+        if (income != null) {
+            return income.getOccurredAt();
+        }
+        return null;
     }
 }
