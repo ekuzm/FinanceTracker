@@ -12,6 +12,8 @@ databaseChangeLog:
   - include:
         file: db/migrations/006-create-transaction-type.yaml
   - include:
+        file: db/migrations/009-create-transfers.yaml
+  - include:
         file: db/migrations/007-create-transactions.yaml
   - include:
         file: db/migrations/008-create-transaction-tag.yaml

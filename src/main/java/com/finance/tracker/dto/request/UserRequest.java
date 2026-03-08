@@ -25,5 +25,5 @@ public class UserRequest {
 
     private List<Long> accountIds;
 
-    private List<Long> transactionIds;
+    private List<Long> budgetIds;
 }

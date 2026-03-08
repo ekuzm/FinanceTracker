@@ -19,22 +19,8 @@ databaseChangeLog:
             type: VARCHAR(50)
             constraints:
               nullable: false
-        - column:
-            name: user_id
-            type: BIGINT
-            constraints:
-              nullable: false
-    - addForeignKeyConstraint:
-        baseTableName: tags
-        baseColumnNames: user_id
-        referencedTableName: users
-        referencedColumnNames: id
-        constraintName: fk_tags_user
-        onDelete: CASCADE
-        onUpdate: CASCADE
+              checkConstraint: name = lower(trim(name))
     - addUniqueConstraint:
         tableName: tags
-        columnNames: user_id, name
-        constraintName: uk_tags_user_name
-    - sql:
-        sql: ALTER TABLE tags ADD CONSTRAINT ck_tags_name_lowercase CHECK (name = lower(trim(name)))
+        columnNames: name
+        constraintName: uk_tags_name

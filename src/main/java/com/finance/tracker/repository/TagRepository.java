@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TagRepository extends JpaRepository<Tag, Long> {
 
-    boolean existsByUserIdAndName(Long userId, String name);
+    boolean existsByName(String name);
 
-    boolean existsByUserIdAndNameAndIdNot(Long userId, String name, Long id);
+    boolean existsByNameAndIdNot(String name, Long id);
 }

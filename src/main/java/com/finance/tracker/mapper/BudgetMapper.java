@@ -1,24 +1,18 @@
 package com.finance.tracker.mapper;
 
 import com.finance.tracker.domain.Budget;
-import com.finance.tracker.domain.Transaction;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
 import com.finance.tracker.dto.response.BudgetResponse;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-
 @Component
 public class BudgetMapper {
 
-    public BudgetResponse toResponse(Budget budget, BigDecimal spent, boolean includeTransactions) {
+    public BudgetResponse toResponse(Budget budget) {
         if (budget == null) {
             return null;
         }
-
-        BigDecimal safeSpent = spent == null ? BigDecimal.ZERO : spent;
-        BigDecimal remainingAmount = budget.getLimitAmount().subtract(safeSpent);
 
         BudgetResponse response = new BudgetResponse();
         response.setId(budget.getId());
@@ -27,18 +21,6 @@ public class BudgetMapper {
         response.setStartDate(budget.getStartDate());
         response.setEndDate(budget.getEndDate());
         response.setUserId(budget.getUser() != null ? budget.getUser().getId() : null);
-        response.setSpent(safeSpent);
-        response.setRemainingAmount(remainingAmount);
-        response.setOverLimit(remainingAmount.signum() < 0);
-
-        if (includeTransactions) {
-            response.setTransactionIds(
-                    budget.getTransactions() != null
-                            ? budget.getTransactions().stream().map(Transaction::getId).toList()
-                            : null);
-        } else {
-            response.setTransactionIds(null);
-        }
 
         return response;
     }

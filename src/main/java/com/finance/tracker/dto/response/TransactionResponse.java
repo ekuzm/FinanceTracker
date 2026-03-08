@@ -23,12 +23,8 @@ public class TransactionResponse {
     private BigDecimal amount;
     private String description;
     private TransactionType type;
-    private Long budgetId;
-    private String budgetName;
     private Long accountId;
     private String accountName;
-    private Long userId;
-    private String username;
     private List<Long> tagIds;
     private UUID transferId;
 }

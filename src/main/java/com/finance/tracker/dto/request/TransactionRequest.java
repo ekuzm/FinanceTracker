@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.DecimalMin;
 import com.finance.tracker.domain.TransactionType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,15 +37,7 @@ public class TransactionRequest {
 
     @NotNull
     @Positive
-    private Long userId;
-
-    @NotNull
-    @Positive
     private Long accountId;
-
-    @NotNull
-    @Positive
-    private Long budgetId;
 
     private List<Long> tagIds;
 }

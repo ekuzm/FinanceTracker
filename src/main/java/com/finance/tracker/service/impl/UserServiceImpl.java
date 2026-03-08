@@ -1,13 +1,13 @@
 package com.finance.tracker.service.impl;
 
 import com.finance.tracker.domain.Account;
-import com.finance.tracker.domain.Transaction;
+import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.UserRequest;
 import com.finance.tracker.dto.response.UserResponse;
 import com.finance.tracker.mapper.UserMapper;
 import com.finance.tracker.repository.AccountRepository;
-import com.finance.tracker.repository.TransactionRepository;
+import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.UserService;
 
@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final TransactionRepository transactionRepository;
+    private final BudgetRepository budgetRepository;
     private final UserMapper userMapper;
 
     @Override
@@ -45,11 +45,11 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(UserRequest request) {
-        List<Account> accounts = getAccountsIfPresent(request.getAccountIds());
-        List<Transaction> transactions = getTransactionsIfPresent(request.getTransactionIds());
+        List<Account> accounts = getAccounts(request.getAccountIds());
+        List<Budget> budgets = getBudgets(request.getBudgetIds());
         ensureAssignableAccounts(accounts, null);
-        ensureAssignableTransactions(transactions, null);
-        User user = userMapper.fromRequest(request, accounts, transactions);
+        ensureAssignableBudgets(budgets, null);
+        User user = userMapper.fromRequest(request, accounts, budgets);
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
     }
@@ -72,12 +72,12 @@ public class UserServiceImpl implements UserService {
             user.setAccounts(accounts);
             accounts.forEach(a -> a.setUser(user));
         }
-        if (request.getTransactionIds() != null) {
-            List<Transaction> transactions = getTransactions(request.getTransactionIds());
-            ensureAssignableTransactions(transactions, user.getId());
-            user.getTransactions().forEach(t -> t.setUser(null));
-            user.setTransactions(transactions);
-            transactions.forEach(t -> t.setUser(user));
+        if (request.getBudgetIds() != null) {
+            List<Budget> budgets = getBudgets(request.getBudgetIds());
+            ensureAssignableBudgets(budgets, user.getId());
+            user.getBudgets().forEach(b -> b.setUser(null));
+            user.setBudgets(budgets);
+            budgets.forEach(b -> b.setUser(user));
         }
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
@@ -93,6 +93,9 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<Account> getAccounts(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
         List<Account> accounts = accountRepository.findAllById(accountIds);
         if (accounts.size() != accountIds.size()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some accounts not found");
@@ -100,26 +103,15 @@ public class UserServiceImpl implements UserService {
         return accounts;
     }
 
-    private List<Account> getAccountsIfPresent(List<Long> accountIds) {
-        if (accountIds == null || accountIds.isEmpty()) {
+    private List<Budget> getBudgets(List<Long> budgetIds) {
+        if (budgetIds == null || budgetIds.isEmpty()) {
             return List.of();
         }
-        return getAccounts(accountIds);
-    }
-
-    private List<Transaction> getTransactions(List<Long> transactionIds) {
-        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
-        if (transactions.size() != transactionIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some transactions not found");
+        List<Budget> budgets = budgetRepository.findAllById(budgetIds);
+        if (budgets.size() != budgetIds.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some budgets not found");
         }
-        return transactions;
-    }
-
-    private List<Transaction> getTransactionsIfPresent(List<Long> transactionIds) {
-        if (transactionIds == null || transactionIds.isEmpty()) {
-            return List.of();
-        }
-        return getTransactions(transactionIds);
+        return budgets;
     }
 
     private List<UserResponse> toResponses(List<User> users) {
@@ -139,16 +131,15 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void ensureAssignableTransactions(List<Transaction> transactions, Long currentUserId) {
-        for (Transaction transaction : transactions) {
-            boolean hasOwner = transaction.getUser() != null;
-            boolean belongsToCurrentUser = currentUserId != null && hasOwner
-                    && currentUserId.equals(transaction.getUser().getId());
+    private void ensureAssignableBudgets(List<Budget> budgets, Long currentUserId) {
+        for (Budget budget : budgets) {
+            boolean hasOwner = budget.getUser() != null;
+            boolean belongsToCurrentUser =
+                    currentUserId != null && hasOwner && currentUserId.equals(budget.getUser().getId());
 
             if (hasOwner && !belongsToCurrentUser) {
                 throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Transaction " + transaction.getId() + " already belongs to another user");
+                        HttpStatus.CONFLICT, "Budget " + budget.getId() + " already belongs to another user");
             }
         }
     }

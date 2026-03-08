@@ -1,0 +1,20 @@
+databaseChangeLog:
+- changeSet:
+    id: 009-create-transfers
+    author: ekuzm
+    changes:
+    - createTable:
+        tableName: transfers
+        columns:
+        - column:
+            name: id
+            type: UUID
+            constraints:
+              primaryKey: true
+              primaryKeyName: pk_transfers
+              nullable: false
+        - column:
+            name: note
+            type: VARCHAR(255)
+            constraints:
+              nullable: false

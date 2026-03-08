@@ -1,7 +1,6 @@
 package com.finance.tracker.controller;
 
 import com.finance.tracker.dto.request.AccountRequest;
-import com.finance.tracker.dto.request.TransferRequest;
 import com.finance.tracker.dto.response.AccountResponse;
 import com.finance.tracker.service.AccountService;
 
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,46 +24,33 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/accounts")
 public class AccountController {
 
-    private final AccountService service;
+    private final AccountService accountService;
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getAccountById(id));
+        return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
     @GetMapping
     public ResponseEntity<List<AccountResponse>> getAllAccounts() {
-        return ResponseEntity.ok(service.getAllAccounts());
+        return ResponseEntity.ok(accountService.getAllAccounts());
     }
 
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody AccountRequest request) {
-        AccountResponse response = service.createAccount(request);
+        AccountResponse response = accountService.createAccount(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(@PathVariable Long id,
             @RequestBody AccountRequest request) {
-        return ResponseEntity.ok(service.updateAccount(id, request));
+        return ResponseEntity.ok(accountService.updateAccount(id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
-        service.deleteAccount(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/transfer")
-    public ResponseEntity<Void> transfer(
-            @Valid @RequestBody TransferRequest request,
-            @RequestParam(defaultValue = "true") boolean transactional,
-            @RequestParam(defaultValue = "false") boolean failAfterDebit) {
-        if (transactional) {
-            service.transferTx(request, failAfterDebit);
-        } else {
-            service.transferNoTx(request, failAfterDebit);
-        }
+        accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();
     }
 }

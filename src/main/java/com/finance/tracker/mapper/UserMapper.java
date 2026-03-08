@@ -1,7 +1,7 @@
 package com.finance.tracker.mapper;
 
 import com.finance.tracker.domain.Account;
-import com.finance.tracker.domain.Transaction;
+import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.UserRequest;
 import com.finance.tracker.dto.response.UserResponse;
@@ -22,20 +22,17 @@ public class UserMapper {
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
-
         response.setAccountIds(user.getAccounts() != null ? user.getAccounts().stream().map(Account::getId).toList()
                 : null);
-
-        response.setTransactionIds(
-                user.getTransactions() != null ? user.getTransactions().stream().map(Transaction::getId).toList()
-                        : null);
+        response.setBudgetIds(user.getBudgets() != null ? user.getBudgets().stream().map(Budget::getId).toList()
+                : null);
 
         return response;
     }
 
     public User fromRequest(UserRequest request,
             List<Account> accounts,
-            List<Transaction> transactions) {
+            List<Budget> budgets) {
 
         if (request == null) {
             return null;
@@ -48,9 +45,9 @@ public class UserMapper {
             user.setAccounts(accounts);
             accounts.forEach(a -> a.setUser(user));
         }
-        if (transactions != null) {
-            user.setTransactions(transactions);
-            transactions.forEach(t -> t.setUser(user));
+        if (budgets != null) {
+            user.setBudgets(budgets);
+            budgets.forEach(b -> b.setUser(user));
         }
         return user;
     }
@@ -68,8 +65,8 @@ public class UserMapper {
                 ? user.getAccounts().stream().map(Account::getId).collect(Collectors.toList())
                 : null);
 
-        request.setTransactionIds(user.getTransactions() != null
-                ? user.getTransactions().stream().map(Transaction::getId).collect(Collectors.toList())
+        request.setBudgetIds(user.getBudgets() != null
+                ? user.getBudgets().stream().map(Budget::getId).collect(Collectors.toList())
                 : null);
 
         return request;

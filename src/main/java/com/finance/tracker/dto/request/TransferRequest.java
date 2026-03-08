@@ -20,10 +20,6 @@ public class TransferRequest {
 
     @NotNull
     @Min(1)
-    private Long userId;
-
-    @NotNull
-    @Min(1)
     private Long fromAccountId;
 
     @NotNull
@@ -37,5 +33,5 @@ public class TransferRequest {
     private LocalDateTime occurredAt;
 
     @Size(max = 255)
-    private String description;
+    private String note;
 }

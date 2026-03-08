@@ -1,20 +1,16 @@
 package com.finance.tracker.service.impl;
 
 import com.finance.tracker.domain.Account;
-import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.Tag;
 import com.finance.tracker.domain.Transaction;
-import com.finance.tracker.domain.User;
+import com.finance.tracker.domain.TransactionType;
 import com.finance.tracker.dto.request.TransactionRequest;
 import com.finance.tracker.dto.response.TransactionResponse;
 import com.finance.tracker.mapper.TransactionMapper;
 import com.finance.tracker.repository.AccountRepository;
-import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.TagRepository;
 import com.finance.tracker.repository.TransactionRepository;
-import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.TransactionService;
-import com.finance.tracker.domain.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,9 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
-    private final BudgetRepository budgetRepository;
     private final TagRepository tagRepository;
-    private final UserRepository userRepository;
     private final TransactionMapper transactionMapper;
 
     @Override
@@ -47,7 +41,7 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
-        return transactionMapper.toResponse(transaction, true, true);
+        return transactionMapper.toResponse(transaction);
     }
 
     @Override
@@ -83,20 +77,17 @@ public class TransactionServiceImpl implements TransactionService {
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59, 999_999_999);
         List<Transaction> transactions = includeTransfers
                 ? transactionRepository.findByOccurredAtBetween(startDateTime, endDateTime)
-                : transactionRepository.findByOccurredAtBetweenAndTransferIdIsNull(startDateTime, endDateTime);
+                : transactionRepository.findByOccurredAtBetweenAndTransferIsNull(startDateTime, endDateTime);
         return toResponses(transactions);
     }
 
     @Override
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request) {
-        User user = getUser(request.getUserId());
         Account account = getAccount(request.getAccountId());
-        Budget budget = getBudget(request.getBudgetId());
-        List<Tag> tags = getTagsForUser(request.getTagIds(), user.getId());
+        List<Tag> tags = getTags(request.getTagIds());
 
-        validateTransactionIntegrity(user, account, budget, tags, request.getOccurredAt(), null);
-        Transaction transaction = transactionMapper.fromRequest(request, user, account, budget, tags);
+        Transaction transaction = transactionMapper.fromRequest(request, account, tags);
 
         applyDeltaToAccount(account, request.getType(), request.getAmount());
         accountRepository.save(account);
@@ -111,16 +102,20 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
+        if (transaction.getTransfer() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Transfer transaction cannot be updated directly");
+        }
+
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
 
-        User user = request.getUserId() != null ? getUser(request.getUserId()) : transaction.getUser();
         Account account = request.getAccountId() != null
                 ? getAccount(request.getAccountId())
                 : transaction.getAccount();
-        Budget budget = request.getBudgetId() != null ? getBudget(request.getBudgetId()) : transaction.getBudget();
         List<Tag> tags = request.getTagIds() != null
-                ? getTagsForUser(request.getTagIds(), user.getId())
+                ? getTags(request.getTagIds())
                 : transaction.getTags();
         LocalDateTime occurredAt = request.getOccurredAt() != null
                 ? request.getOccurredAt()
@@ -129,11 +124,7 @@ public class TransactionServiceImpl implements TransactionService {
         String description = request.getDescription() != null ? request.getDescription() : transaction.getDescription();
         TransactionType type = request.getType() != null ? request.getType() : transaction.getType();
 
-        validateTransactionIntegrity(user, account, budget, tags, occurredAt, transaction.getTransferId());
-
-        transaction.setUser(user);
         transaction.setAccount(account);
-        transaction.setBudget(budget);
         transaction.setTags(tags);
         transaction.setOccurredAt(occurredAt);
         transaction.setAmount(amount);
@@ -154,14 +145,15 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
+        if (transaction.getTransfer() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Transfer transaction cannot be deleted directly");
+        }
+
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
         transactionRepository.delete(transaction);
-    }
-
-    private Budget getBudget(Long budgetId) {
-        return budgetRepository.findById(budgetId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found: " + budgetId));
     }
 
     private Account getAccount(Long accountId) {
@@ -170,12 +162,7 @@ public class TransactionServiceImpl implements TransactionService {
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + accountId));
     }
 
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId));
-    }
-
-    private List<Tag> getTagsForUser(List<Long> tagIds, Long userId) {
+    private List<Tag> getTags(List<Long> tagIds) {
         if (tagIds == null || tagIds.isEmpty()) {
             return List.of();
         }
@@ -184,55 +171,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (tags.size() != tagIds.size()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some tags not found");
         }
-
-        boolean foreignTagExists = tags.stream()
-                .anyMatch(tag -> tag.getUser() == null || !userId.equals(tag.getUser().getId()));
-        if (foreignTagExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Some tags do not belong to provided user");
-        }
         return tags;
-    }
-
-    private void validateTransactionIntegrity(
-            User user,
-            Account account,
-            Budget budget,
-            List<Tag> tags,
-            LocalDateTime occurredAt,
-            java.util.UUID transferId) {
-        Long userId = user.getId();
-        if (account.getUser() == null || !userId.equals(account.getUser().getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account does not belong to provided user");
-        }
-
-        if (transferId == null && budget == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Budget is required for non-transfer transaction");
-        }
-        if (transferId != null && budget != null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Transfer transactions cannot have budget assigned");
-        }
-
-        if (budget != null) {
-            if (budget.getUser() == null || !userId.equals(budget.getUser().getId())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Budget does not belong to provided user");
-            }
-            LocalDate occurredDate = occurredAt.toLocalDate();
-            if (occurredDate.isBefore(budget.getStartDate()) || occurredDate.isAfter(budget.getEndDate())) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Transaction date is outside budget period");
-            }
-        }
-
-        if (transferId != null && tags != null && !tags.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Transfer transactions cannot have tags");
-        }
     }
 
     private void applyDeltaToAccount(Account account, TransactionType type, BigDecimal amount) {
@@ -254,7 +193,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private List<TransactionResponse> toResponses(List<Transaction> transactions) {
         return transactions.stream()
-                .map(transaction -> transactionMapper.toResponse(transaction, true, true))
+                .map(transactionMapper::toResponse)
                 .toList();
     }
 }

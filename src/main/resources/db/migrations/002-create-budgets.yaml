@@ -34,6 +34,7 @@ databaseChangeLog:
             type: DATE
             constraints:
               nullable: false
+              checkConstraint: start_date <= end_date
         - column:
             name: user_id
             type: BIGINT
@@ -47,9 +48,3 @@ databaseChangeLog:
         constraintName: fk_budgets_user
         onDelete: CASCADE
         onUpdate: CASCADE
-    - addUniqueConstraint:
-        tableName: budgets
-        columnNames: id, user_id
-        constraintName: uk_budgets_id_user
-    - sql:
-        sql: ALTER TABLE budgets ADD CONSTRAINT ck_budgets_date_range CHECK (start_date <= end_date)

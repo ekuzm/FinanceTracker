@@ -1,7 +1,6 @@
 package com.finance.tracker.mapper;
 
 import com.finance.tracker.domain.Tag;
-import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.TagRequest;
 import com.finance.tracker.dto.response.TagResponse;
 import org.springframework.stereotype.Component;
@@ -19,18 +18,16 @@ public class TagMapper {
         TagResponse response = new TagResponse();
         response.setId(tag.getId());
         response.setName(tag.getName());
-        response.setUserId(tag.getUser() != null ? tag.getUser().getId() : null);
         return response;
     }
 
-    public Tag fromRequest(TagRequest request, User user) {
+    public Tag fromRequest(TagRequest request) {
         if (request == null) {
             return null;
         }
 
         Tag tag = new Tag();
         tag.setName(normalizeName(request.getName()));
-        tag.setUser(user);
         return tag;
     }
 
