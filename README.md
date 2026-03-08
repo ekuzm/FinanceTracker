@@ -10,7 +10,6 @@
 
 <img width="758" height="603" alt=" ER-diagram" src="https://github.com/user-attachments/assets/aac5c160-384e-4b68-84e5-a70feaea4e2b" />
 
-
 ---
 
 ## API
@@ -24,19 +23,7 @@
 - `/api/v1/budgets`
 - `/api/v1/tags`
 - `/api/v1/transactions`
-
-Перевод между счетами:
-
-- `POST /api/v1/accounts/transfer?transactional=true|false&failAfterDebit=true|false`
-
-Особенности списка транзакций:
-
-- по умолчанию `GET /api/v1/transactions` скрывает transfer-записи;
-- для включения переводов используйте `includeTransfers=true`;
-- для демонстрации подгрузки связей доступен `withEntityGraph=true`;
-- фильтр по датам использует `startDate` и `endDate` одновременно (`YYYY-MM-DD`).
-
----
+- `/api/v1/transfers`
 
 ## Запуск приложения
 
@@ -65,28 +52,6 @@ docker compose up -d --build
 ```bash
 docker compose down
 ```
-
----
-
-## Быстрая проверка API
-
-Примеры запросов после запуска стека:
-
-```bash
-curl -s http://localhost:8080/api/v1/users
-```
-
-```bash
-curl -s -X POST http://localhost:8080/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"username":"alex","email":"alex@example.com"}'
-```
-
-```bash
-curl -s "http://localhost:8080/api/v1/transactions?includeTransfers=true"
-```
-
-Детальные контракты request/response и бизнес-ограничения описаны в [docs/api.md](docs/api.md).
 
 ---
 
