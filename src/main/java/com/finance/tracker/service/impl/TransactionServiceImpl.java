@@ -45,25 +45,18 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<TransactionResponse> getAllTransactions(boolean withEntityGraph, boolean includeTransfers) {
+    public List<TransactionResponse> getAllTransactions(boolean withEntityGraph) {
         List<Transaction> transactions;
         if (withEntityGraph) {
-            if (includeTransfers) {
-                transactions = transactionRepository.findAllTransactionsWithEntityGraph();
-            } else {
-                transactions = transactionRepository.findAllTransactionsWithoutTransfersWithEntityGraph();
-            }
-        } else if (includeTransfers) {
-            transactions = transactionRepository.findAllTransactions();
+            transactions = transactionRepository.findAllTransactionsWithEntityGraph();
         } else {
-            transactions = transactionRepository.findAllTransactionsWithoutTransfers();
+            transactions = transactionRepository.findAllTransactions();
         }
         return toResponses(transactions);
     }
 
     @Override
-    public List<TransactionResponse> getTransactionsByDateRange(
-            LocalDate startDate, LocalDate endDate, boolean includeTransfers) {
+    public List<TransactionResponse> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -75,9 +68,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59, 999_999_999);
-        List<Transaction> transactions = includeTransfers
-                ? transactionRepository.findByOccurredAtBetween(startDateTime, endDateTime)
-                : transactionRepository.findByOccurredAtBetweenAndTransferIsNull(startDateTime, endDateTime);
+        List<Transaction> transactions = transactionRepository.findByOccurredAtBetween(startDateTime, endDateTime);
         return toResponses(transactions);
     }
 
@@ -101,12 +92,6 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
-
-        if (transaction.getTransfer() != null) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Transfer transaction cannot be updated directly");
-        }
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
@@ -144,12 +129,6 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
-
-        if (transaction.getTransfer() != null) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Transfer transaction cannot be deleted directly");
-        }
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());

@@ -17,3 +17,7 @@ databaseChangeLog:
         file: db/migrations/007-create-transactions.yaml
   - include:
         file: db/migrations/008-create-transaction-tag.yaml
+  - include:
+        file: db/migrations/010-drop-transfer-structures.yaml
+  - include:
+        file: db/migrations/011-change-transactions-account-fk-to-cascade.yaml

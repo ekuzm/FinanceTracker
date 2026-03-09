@@ -1,29 +1,28 @@
 package com.finance.tracker.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransferRequest {
+public class AccountTransferRequest {
 
     @NotNull
-    @Min(1)
+    @Positive
     private Long fromAccountId;
 
     @NotNull
-    @Min(1)
+    @Positive
     private Long toAccountId;
 
     @NotNull

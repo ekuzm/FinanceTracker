@@ -18,19 +18,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT t FROM Transaction t")
     List<Transaction> findAllTransactions();
 
-    @Query("SELECT t FROM Transaction t WHERE t.transfer IS NULL")
-    List<Transaction> findAllTransactionsWithoutTransfers();
-
-    @EntityGraph(attributePaths = { "account", "transfer", "tags" })
+    @EntityGraph(attributePaths = { "account", "tags" })
     @Query("SELECT t FROM Transaction t")
     List<Transaction> findAllTransactionsWithEntityGraph();
-
-    @EntityGraph(attributePaths = { "account", "transfer", "tags" })
-    @Query("SELECT t FROM Transaction t WHERE t.transfer IS NULL")
-    List<Transaction> findAllTransactionsWithoutTransfersWithEntityGraph();
-
-    List<Transaction> findByOccurredAtBetweenAndTransferIsNull(
-            LocalDateTime startDateTime, LocalDateTime endDateTime);
 
     boolean existsByAccountId(Long accountId);
 }

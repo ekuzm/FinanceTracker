@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+        id: 010-drop-transfer-structures
+        author: codex
+        changes:
+          - dropForeignKeyConstraint:
+                baseTableName: transactions
+                constraintName: fk_transactions_transfer
+          - dropColumn:
+                tableName: transactions
+                columnName: transfer_id
+          - dropTable:
+                tableName: transfers

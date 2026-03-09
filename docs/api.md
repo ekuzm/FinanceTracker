@@ -52,6 +52,11 @@ Notes:
 
 Удалить пользователя.
 
+Правила:
+
+- связанные `accounts` и `budgets` удаляются каскадно
+- транзакции удаляемых счетов тоже удаляются каскадно
+
 ---
 
 ## Accounts - `/api/v1/accounts`
@@ -98,7 +103,46 @@ Notes:
 
 Правила:
 
-- нельзя удалить счет, если у него есть транзакции -> `409`
+- все связанные транзакции удаляются каскадно
+
+---
+
+## Account Transfer - `/api/v1/account/transfer`
+
+### `POST /api/v1/account/transfer`
+
+Перевести сумму между двумя счетами одного пользователя.
+
+Query params:
+
+- `transactional` (optional, default `true`)
+- `failAfterDebit` (optional, default `false`)
+
+Request:
+
+```json
+{
+  "fromAccountId": 1,
+  "toAccountId": 2,
+  "amount": 150.00,
+  "occurredAt": "2026-03-08T10:30:00",
+  "note": "Card to savings"
+}
+```
+
+Правила:
+
+- `fromAccountId`, `toAccountId`, `amount` обязательны
+- `fromAccountId` и `toAccountId` должны быть разными -> `400`
+- оба счета должны принадлежать одному пользователю -> `409`
+- `amount >= 0.01`
+- на исходном счете должно хватать средств -> `409`
+- создаются две обычные транзакции без `transfer_id`:
+  - `EXPENSE` для `fromAccountId`
+  - `INCOME` для `toAccountId`
+- `transactional=true`: при ошибке после списания изменения откатываются
+- `transactional=false`: при ошибке после списания сохранится дебет и первая транзакция
+- успешное выполнение возвращает `204 No Content` без тела ответа
 
 ---
 
@@ -187,6 +231,11 @@ Notes:
 
 Удалить тег.
 
+Правила:
+
+- удаляется только сам тег и его связи в `transaction_tag`
+- сами `transactions` не удаляются
+
 ---
 
 ## Transactions - `/api/v1/transactions`
@@ -200,11 +249,10 @@ Query params:
 - `startDate` (`YYYY-MM-DD`, optional)
 - `endDate` (`YYYY-MM-DD`, optional)
 - `withEntityGraph` (optional, default `false`)
-- `includeTransfers` (optional, default `false`)
 
 Поведение:
 
-- если `startDate` и `endDate` не заданы -> возвращаются все транзакции по `withEntityGraph/includeTransfers`
+- если `startDate` и `endDate` не заданы -> возвращаются все транзакции
 - если задан хотя бы один из `startDate/endDate`, должны быть заданы оба -> `400`
 - если `startDate > endDate` -> `400`
 
@@ -214,7 +262,7 @@ Query params:
 
 ### `POST /api/v1/transactions`
 
-Создать обычную транзакцию (без `Transfer`).
+Создать транзакцию.
 
 ```json
 {
@@ -248,8 +296,7 @@ Query params:
   "type": "EXPENSE",
   "accountId": 1,
   "accountName": "Main Card",
-  "tagIds": [1, 2],
-  "transferId": null
+  "tagIds": [1, 2]
 }
 ```
 
@@ -259,7 +306,6 @@ Query params:
 
 Правила:
 
-- transfer-транзакции нельзя обновлять напрямую -> `409`
 - при обновлении баланс сначала откатывается от старого значения, затем применяется новое
 
 ### `DELETE /api/v1/transactions/{id}`
@@ -268,83 +314,7 @@ Query params:
 
 Правила:
 
-- transfer-транзакции нельзя удалять напрямую -> `409`
+- при удалении баланс счета откатывается с учетом типа транзакции
+- другие сущности каскадно не удаляются
 
 ---
-
-## Transfers - `/api/v1/transfers`
-
-### `GET /api/v1/transfers`
-
-Получить список переводов.
-
-### `GET /api/v1/transfers/{id}`
-
-Получить перевод по UUID.
-
-### `POST /api/v1/transfers`
-
-Создать перевод.
-
-Query params:
-
-- `transactional` (optional, default `true`)
-- `failAfterDebit` (optional, default `false`)
-
-Request:
-
-```json
-{
-  "fromAccountId": 1,
-  "toAccountId": 2,
-  "amount": 150.00,
-  "occurredAt": "2026-03-08T10:30:00",
-  "note": "Transfer to savings"
-}
-```
-
-Правила:
-
-- `fromAccountId`, `toAccountId`, `amount` обязательны
-- `fromAccountId != toAccountId` -> иначе `400`
-- оба счета должны принадлежать одному пользователю -> иначе `409`
-- на счете-источнике должны быть достаточные средства -> иначе `409`
-- `amount > 0`
-- `note` опционален, при пустом значении используется `"Transfer"`
-- создается `Transfer` и 2 транзакции: `EXPENSE` + `INCOME`
-- `fromAccountId`/`toAccountId` в `TransferResponse` вычисляются из этих транзакций (через их `accountId`)
-- `TransferResponse` минимальный: без `transactionIds`, `expenseTransactionId`, `incomeTransactionId`, `from/toAccountName`
-
-Пример ответа:
-
-```json
-{
-  "id": "4bd91d20-91f3-4eb7-a219-487db4063dbf",
-  "fromAccountId": 1,
-  "toAccountId": 2,
-  "amount": 150.00,
-  "occurredAt": "2026-03-08T10:30:00",
-  "note": "Transfer to savings"
-}
-```
-
-Отдельный тестовый сценарий:
-
-- `transactional=false&failAfterDebit=true` намеренно выбрасывает `500` после дебета, чтобы показать поведение без транзакции.
-
-### `PATCH /api/v1/transfers/{id}`
-
-Частичное обновление перевода.
-
-Правила:
-
-- можно обновлять счета/сумму/дату/заметку
-- при обновлении сначала откатывается старое влияние перевода на балансы, затем применяется новое
-
-### `DELETE /api/v1/transfers/{id}`
-
-Удалить перевод.
-
-Правила:
-
-- при удалении влияние перевода на балансы откатывается

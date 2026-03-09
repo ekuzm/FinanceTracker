@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+        id: 011-change-transactions-account-fk-to-cascade
+        author: codex
+        changes:
+          - dropForeignKeyConstraint:
+                baseTableName: transactions
+                constraintName: fk_transactions_account
+          - addForeignKeyConstraint:
+                baseTableName: transactions
+                baseColumnNames: account_id
+                referencedTableName: accounts
+                referencedColumnNames: id
+                constraintName: fk_transactions_account
+                onDelete: CASCADE
+                onUpdate: CASCADE

@@ -10,10 +10,9 @@ public interface TransactionService {
 
     TransactionResponse getTransactionById(Long id);
 
-    List<TransactionResponse> getAllTransactions(boolean withEntityGraph, boolean includeTransfers);
+    List<TransactionResponse> getAllTransactions(boolean withEntityGraph);
 
-    List<TransactionResponse> getTransactionsByDateRange(
-            LocalDate startDate, LocalDate endDate, boolean includeTransfers);
+    List<TransactionResponse> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate);
 
     TransactionResponse createTransaction(TransactionRequest request);
 

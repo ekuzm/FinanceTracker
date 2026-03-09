@@ -28,7 +28,6 @@ public class TransactionMapper {
         response.setAccountName(transaction.getAccount() != null ? transaction.getAccount().getName() : null);
         response.setTagIds(
                 transaction.getTags() != null ? transaction.getTags().stream().map(Tag::getId).toList() : List.of());
-        response.setTransferId(transaction.getTransfer() != null ? transaction.getTransfer().getId() : null);
 
         return response;
     }
@@ -47,7 +46,6 @@ public class TransactionMapper {
         transaction.setDescription(request.getDescription());
         transaction.setType(request.getType());
         transaction.setAccount(account);
-        transaction.setTransfer(null);
         transaction.setTags(tags != null ? new ArrayList<>(tags) : new ArrayList<>());
 
         return transaction;

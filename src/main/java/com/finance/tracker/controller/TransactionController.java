@@ -38,12 +38,11 @@ public class TransactionController {
     public ResponseEntity<List<TransactionResponse>> getByDateRange(
             @RequestParam(required = false) final LocalDate startDate,
             @RequestParam(required = false) final LocalDate endDate,
-            @RequestParam(required = false, defaultValue = "false") final boolean withEntityGraph,
-            @RequestParam(required = false, defaultValue = "false") final boolean includeTransfers) {
+            @RequestParam(required = false, defaultValue = "false") final boolean withEntityGraph) {
         if (startDate == null && endDate == null) {
-            return ResponseEntity.ok(service.getAllTransactions(withEntityGraph, includeTransfers));
+            return ResponseEntity.ok(service.getAllTransactions(withEntityGraph));
         }
-        return ResponseEntity.ok(service.getTransactionsByDateRange(startDate, endDate, includeTransfers));
+        return ResponseEntity.ok(service.getTransactionsByDateRange(startDate, endDate));
     }
 
     @PostMapping
