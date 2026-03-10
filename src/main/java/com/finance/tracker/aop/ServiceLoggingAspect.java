@@ -1,6 +1,5 @@
 package com.finance.tracker.aop;
 
-import com.finance.tracker.exception.ApiException;
 import com.finance.tracker.exception.LoggingException;
 import java.util.Arrays;
 import org.aspectj.lang.ProceedingJoinPoint;
