@@ -22,7 +22,7 @@ public class TransactionController implements TransactionControllerApi {
 
     private final TransactionService service;
 
-    public ResponseEntity<TransactionResponse> getById(@PathVariable final Long id) {
+    public ResponseEntity<TransactionResponse> getById(@PathVariable("id") final Long id) {
         return ResponseEntity.ok(service.getTransactionById(id));
     }
 
@@ -41,12 +41,12 @@ public class TransactionController implements TransactionControllerApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    public ResponseEntity<TransactionResponse> updateTransaction(@PathVariable Long id,
+    public ResponseEntity<TransactionResponse> updateTransaction(@PathVariable("id") Long id,
             @Valid @RequestBody TransactionUpdateRequest request) {
         return ResponseEntity.ok(service.updateTransaction(id, request));
     }
 
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteTransaction(@PathVariable("id") Long id) {
         service.deleteTransaction(id);
         return ResponseEntity.noContent().build();
     }

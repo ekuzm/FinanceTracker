@@ -25,7 +25,7 @@ public class BudgetController implements BudgetControllerApi {
 
     private final BudgetService service;
 
-    public ResponseEntity<BudgetResponse> getBudgetById(@PathVariable Long id) {
+    public ResponseEntity<BudgetResponse> getBudgetById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(service.getBudgetById(id));
     }
 
@@ -44,12 +44,12 @@ public class BudgetController implements BudgetControllerApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    public ResponseEntity<BudgetResponse> updateBudget(@PathVariable Long id,
+    public ResponseEntity<BudgetResponse> updateBudget(@PathVariable("id") Long id,
             @Valid @RequestBody BudgetUpdateRequest request) {
         return ResponseEntity.ok(service.updateBudget(id, request));
     }
 
-    public ResponseEntity<Void> deleteBudget(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBudget(@PathVariable("id") Long id) {
         service.deleteBudget(id);
         return ResponseEntity.noContent().build();
     }

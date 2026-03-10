@@ -23,7 +23,7 @@ public class UserController implements UserControllerApi {
 
     private final UserService service;
 
-    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(service.getUserById(id));
     }
 
@@ -56,12 +56,12 @@ public class UserController implements UserControllerApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
+    public ResponseEntity<UserResponse> updateUser(@PathVariable("id") Long id,
             @Valid @RequestBody UserUpdateRequest request) {
         return ResponseEntity.ok(service.updateUser(id, request));
     }
 
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
         service.deleteUser(id);
         return ResponseEntity.noContent().build();
     }

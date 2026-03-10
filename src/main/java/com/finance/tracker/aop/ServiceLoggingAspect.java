@@ -36,9 +36,11 @@ public class ServiceLoggingAspect {
 
         try {
             stopWatch.start(fullMethodName);
-            LOGGER.debug("Executing method: {} with arguments: {}",
-                    fullMethodName,
-                    Arrays.toString(joinPoint.getArgs()));
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Executing method: {} with arguments: {}",
+                        fullMethodName,
+                        Arrays.toString(joinPoint.getArgs()));
+            }
 
             Object result = joinPoint.proceed();
 
@@ -65,7 +67,7 @@ public class ServiceLoggingAspect {
                     fullMethodName,
                     exception.getMessage(),
                     exception);
-            throw new LoggingException(ERROR_EXECUTING_METHOD);
+            throw new LoggingException(ERROR_EXECUTING_METHOD + " " + fullMethodName, exception);
         }
     }
 }

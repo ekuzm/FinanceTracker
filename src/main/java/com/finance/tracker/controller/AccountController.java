@@ -22,7 +22,7 @@ public class AccountController implements AccountControllerApi {
 
     private final AccountService accountService;
 
-    public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long id) {
+    public ResponseEntity<AccountResponse> getAccountById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
@@ -47,12 +47,12 @@ public class AccountController implements AccountControllerApi {
         return ResponseEntity.noContent().build();
     }
 
-    public ResponseEntity<AccountResponse> updateAccount(@PathVariable Long id,
+    public ResponseEntity<AccountResponse> updateAccount(@PathVariable("id") Long id,
             @Valid @RequestBody AccountUpdateRequest request) {
         return ResponseEntity.ok(accountService.updateAccount(id, request));
     }
 
-    public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAccount(@PathVariable("id") Long id) {
         accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();
     }

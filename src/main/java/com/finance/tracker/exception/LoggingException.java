@@ -7,4 +7,8 @@ public class LoggingException extends ApiException {
     public LoggingException(String message) {
         super(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
+
+    public LoggingException(String message, Throwable cause) {
+        super(HttpStatus.INTERNAL_SERVER_ERROR, message, cause);
+    }
 }

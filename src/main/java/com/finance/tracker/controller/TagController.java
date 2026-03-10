@@ -22,7 +22,7 @@ public class TagController implements TagControllerApi {
 
     private final TagService service;
 
-    public ResponseEntity<TagResponse> getTagById(@PathVariable Long id) {
+    public ResponseEntity<TagResponse> getTagById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(service.getTagById(id));
     }
 
@@ -35,12 +35,12 @@ public class TagController implements TagControllerApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    public ResponseEntity<TagResponse> updateTag(@PathVariable Long id,
+    public ResponseEntity<TagResponse> updateTag(@PathVariable("id") Long id,
             @Valid @RequestBody TagUpdateRequest request) {
         return ResponseEntity.ok(service.updateTag(id, request));
     }
 
-    public ResponseEntity<Void> deleteTag(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteTag(@PathVariable("id") Long id) {
         service.deleteTag(id);
         return ResponseEntity.noContent().build();
     }
