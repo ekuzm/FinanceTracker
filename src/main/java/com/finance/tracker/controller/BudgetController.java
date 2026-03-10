@@ -14,7 +14,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,10 +29,12 @@ public class BudgetController implements BudgetControllerApi {
 
     private final BudgetService service;
 
+    @GetMapping("/api/v1/budgets/{id}")
     public ResponseEntity<BudgetResponse> getBudgetById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(service.getBudgetById(id));
     }
 
+    @GetMapping("/api/v1/budgets")
     public ResponseEntity<Page<BudgetResponse>> getAllBudgets(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size,
@@ -39,16 +45,19 @@ public class BudgetController implements BudgetControllerApi {
         return ResponseEntity.ok(service.getAllBudgets(pageable));
     }
 
+    @PostMapping("/api/v1/budgets")
     public ResponseEntity<BudgetResponse> createBudget(@Valid @RequestBody BudgetRequest request) {
         BudgetResponse response = service.createBudget(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PatchMapping("/api/v1/budgets/{id}")
     public ResponseEntity<BudgetResponse> updateBudget(@PathVariable("id") Long id,
             @Valid @RequestBody BudgetUpdateRequest request) {
         return ResponseEntity.ok(service.updateBudget(id, request));
     }
 
+    @DeleteMapping("/api/v1/budgets/{id}")
     public ResponseEntity<Void> deleteBudget(@PathVariable("id") Long id) {
         service.deleteBudget(id);
         return ResponseEntity.noContent().build();

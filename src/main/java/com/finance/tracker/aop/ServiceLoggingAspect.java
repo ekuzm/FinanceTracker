@@ -59,14 +59,7 @@ public class ServiceLoggingAspect {
             }
 
             return result;
-        } catch (ApiException exception) {
-            LOGGER.warn("Business exception in method {}: {}", fullMethodName, exception.getMessage());
-            throw exception;
         } catch (Exception exception) {
-            LOGGER.error("Unexpected error while executing method {}: {}",
-                    fullMethodName,
-                    exception.getMessage(),
-                    exception);
             throw new LoggingException(ERROR_EXECUTING_METHOD + " " + fullMethodName, exception);
         }
     }
