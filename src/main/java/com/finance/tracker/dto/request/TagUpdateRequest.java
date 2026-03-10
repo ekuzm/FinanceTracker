@@ -1,9 +1,6 @@
 package com.finance.tracker.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.List;
-
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -13,19 +10,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-@Schema(description = "Request body for creating a user.")
-public class UserRequest {
+@AllArgsConstructor
+@Schema(description = "Request body for partially updating a tag.")
+public class TagUpdateRequest {
 
     @NotBlank(message = "must not be blank")
-    @Size(min = 3, max = 50)
-    private String username;
-
-    @Email
-    private String email;
-
-    private List<Long> accountIds;
-
-    private List<Long> budgetIds;
+    @Size(min = 1, max = 50)
+    private String name;
 }

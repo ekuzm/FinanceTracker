@@ -1,14 +1,12 @@
 package com.finance.tracker.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,24 +16,20 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Request body for creating a budget.")
-public class BudgetRequest {
+@Schema(description = "Request body for partially updating a budget.")
+public class BudgetUpdateRequest {
 
     @NotBlank(message = "must not be blank")
     @Size(min = 3, max = 50)
     private String name;
 
-    @NotNull
     @Positive
     private BigDecimal limitAmount;
 
-    @NotNull
     private LocalDate startDate;
 
-    @NotNull
     private LocalDate endDate;
 
-    @NotNull
-    @Min(value = 1)
+    @Min(1)
     private Long userId;
 }
