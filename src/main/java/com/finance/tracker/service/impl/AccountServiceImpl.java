@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -27,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class AccountServiceImpl implements AccountService {
 
     private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found ";
@@ -40,76 +43,84 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AccountResponse getAccountById(Long id) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
-        return accountMapper.toResponse(account);
+        return executeWithLogging("getAccountById", () -> {
+            Account account = accountRepository.findById(id).orElseThrow(
+                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+            return accountMapper.toResponse(account);
+        });
     }
 
     @Override
     public List<AccountResponse> getAllAccounts() {
-        return toResponses(accountRepository.findAll());
+        return executeWithLogging("getAllAccounts", () -> toResponses(accountRepository.findAll()));
     }
 
     @Override
     @Transactional
     public AccountResponse createAccount(AccountRequest request) {
-        Account account = accountMapper.fromRequest(request);
-        account.setUser(getUser(request.getUserId()));
-        Account saved = accountRepository.save(account);
-        invalidateSearchCache();
-        return accountMapper.toResponse(saved);
+        return executeWithLogging("createAccount", () -> {
+            Account account = accountMapper.fromRequest(request);
+            account.setUser(getUser(request.getUserId()));
+            Account saved = accountRepository.save(account);
+            invalidateSearchCache();
+            return accountMapper.toResponse(saved);
+        });
     }
 
     @Override
     @Transactional
     public void createTransferTx(AccountTransferRequest request, boolean failAfterDebit) {
-        executeTransfer(request, failAfterDebit);
+        executeWithLogging("createTransferTx", () -> executeTransfer(request, failAfterDebit));
     }
 
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void createTransferNoTx(AccountTransferRequest request, boolean failAfterDebit) {
-        executeTransfer(request, failAfterDebit);
+        executeWithLogging("createTransferNoTx", () -> executeTransfer(request, failAfterDebit));
     }
 
     @Override
     @Transactional
     public AccountResponse updateAccount(Long id, AccountRequest request) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
-        if (request.getName() != null) {
-            account.setName(request.getName());
-        }
-        if (request.getType() != null) {
-            account.setType(request.getType());
-        }
-        if (request.getBalance() != null) {
-            account.setBalance(request.getBalance());
-        }
-        if (request.getUserId() != null) {
-            User newOwner = getUser(request.getUserId());
-            Long currentOwnerId = account.getUser() != null ? account.getUser().getId() : null;
-            if (currentOwnerId != null
-                    && !currentOwnerId.equals(newOwner.getId())
-                    && transactionRepository.existsByAccountId(account.getId())) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Cannot change account owner while account has transactions");
+        return executeWithLogging("updateAccount", () -> {
+            Account account = accountRepository.findById(id).orElseThrow(
+                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+            if (request.getName() != null) {
+                account.setName(request.getName());
             }
-            account.setUser(newOwner);
-        }
-        Account saved = accountRepository.save(account);
-        invalidateSearchCache();
-        return accountMapper.toResponse(saved);
+            if (request.getType() != null) {
+                account.setType(request.getType());
+            }
+            if (request.getBalance() != null) {
+                account.setBalance(request.getBalance());
+            }
+            if (request.getUserId() != null) {
+                User newOwner = getUser(request.getUserId());
+                Long currentOwnerId = account.getUser() != null ? account.getUser().getId() : null;
+                if (currentOwnerId != null
+                        && !currentOwnerId.equals(newOwner.getId())
+                        && transactionRepository.existsByAccountId(account.getId())) {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "Cannot change account owner while account has transactions");
+                }
+                account.setUser(newOwner);
+            }
+            Account saved = accountRepository.save(account);
+            invalidateSearchCache();
+            return accountMapper.toResponse(saved);
+        });
     }
 
     @Override
     @Transactional
     public void deleteAccount(Long id) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
-        accountRepository.delete(account);
-        invalidateSearchCache();
+        executeWithLogging("deleteAccount", () -> {
+            Account account = accountRepository.findById(id).orElseThrow(
+                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+            accountRepository.delete(account);
+            invalidateSearchCache();
+        });
     }
 
     private void executeTransfer(AccountTransferRequest request, boolean failAfterDebit) {
@@ -222,6 +233,41 @@ public class AccountServiceImpl implements AccountService {
 
     private List<AccountResponse> toResponses(List<Account> accounts) {
         return accounts.stream().map(accountMapper::toResponse).toList();
+    }
+
+    private <T> T executeWithLogging(String methodName, java.util.function.Supplier<T> action) {
+        long startTime = System.currentTimeMillis();
+        try {
+            T result = action.get();
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug("Method AccountServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
+            return result;
+        } catch (RuntimeException exception) {
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug(
+                    "Method AccountServiceImpl.{} failed in {} ms: {}",
+                    methodName,
+                    executionTimeMs,
+                    exception.getMessage());
+            throw exception;
+        }
+    }
+
+    private void executeWithLogging(String methodName, Runnable action) {
+        long startTime = System.currentTimeMillis();
+        try {
+            action.run();
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug("Method AccountServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
+        } catch (RuntimeException exception) {
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug(
+                    "Method AccountServiceImpl.{} failed in {} ms: {}",
+                    methodName,
+                    executionTimeMs,
+                    exception.getMessage());
+            throw exception;
+        }
     }
 
     private void invalidateSearchCache() {

@@ -10,6 +10,7 @@ import com.finance.tracker.service.TagService;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class TagServiceImpl implements TagService {
 
     private final TagRepository tagRepository;
@@ -26,56 +28,99 @@ public class TagServiceImpl implements TagService {
 
     @Override
     public TagResponse getTagById(Long id) {
-        Tag tag = tagRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id));
-        return tagMapper.toResponse(tag);
+        return executeWithLogging("getTagById", () -> {
+            Tag tag = tagRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id));
+            return tagMapper.toResponse(tag);
+        });
     }
 
     @Override
     public List<TagResponse> getAllTags() {
-        return tagRepository.findAll().stream()
+        return executeWithLogging("getAllTags", () -> tagRepository.findAll().stream()
                 .map(tagMapper::toResponse)
-                .toList();
+                .toList());
     }
 
     @Override
     @Transactional
     public TagResponse createTag(TagRequest request) {
-        String normalizedName = tagMapper.normalizeName(request.getName());
-        if (tagRepository.existsByName(normalizedName)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Tag with name '" + request.getName() + "' already exists");
-        }
-        Tag tag = tagMapper.fromRequest(request);
-        Tag saved = tagRepository.save(tag);
-        return tagMapper.toResponse(saved);
+        return executeWithLogging("createTag", () -> {
+            String normalizedName = tagMapper.normalizeName(request.getName());
+            if (tagRepository.existsByName(normalizedName)) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Tag with name '" + request.getName() + "' already exists");
+            }
+            Tag tag = tagMapper.fromRequest(request);
+            Tag saved = tagRepository.save(tag);
+            return tagMapper.toResponse(saved);
+        });
     }
 
     @Override
     @Transactional
     public TagResponse updateTag(Long id, TagRequest request) {
-        Tag tag = tagRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id));
-        if (request.getName() != null) {
-            String normalizedName = tagMapper.normalizeName(request.getName());
-            if (tagRepository.existsByNameAndIdNot(normalizedName, id)) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Tag with name '" + request.getName() + "' already exists");
+        return executeWithLogging("updateTag", () -> {
+            Tag tag = tagRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id));
+            if (request.getName() != null) {
+                String normalizedName = tagMapper.normalizeName(request.getName());
+                if (tagRepository.existsByNameAndIdNot(normalizedName, id)) {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "Tag with name '" + request.getName() + "' already exists");
+                }
+                tag.setName(normalizedName);
             }
-            tag.setName(normalizedName);
-        }
-        Tag saved = tagRepository.save(tag);
-        return tagMapper.toResponse(saved);
+            Tag saved = tagRepository.save(tag);
+            return tagMapper.toResponse(saved);
+        });
     }
 
     @Override
     @Transactional
     public void deleteTag(Long id) {
-        if (!tagRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id);
+        executeWithLogging("deleteTag", () -> {
+            if (!tagRepository.existsById(id)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not found " + id);
+            }
+            tagRepository.deleteById(id);
+        });
+    }
+
+    private <T> T executeWithLogging(String methodName, java.util.function.Supplier<T> action) {
+        long startTime = System.currentTimeMillis();
+        try {
+            T result = action.get();
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug("Method TagServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
+            return result;
+        } catch (RuntimeException exception) {
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug(
+                    "Method TagServiceImpl.{} failed in {} ms: {}",
+                    methodName,
+                    executionTimeMs,
+                    exception.getMessage());
+            throw exception;
         }
-        tagRepository.deleteById(id);
+    }
+
+    private void executeWithLogging(String methodName, Runnable action) {
+        long startTime = System.currentTimeMillis();
+        try {
+            action.run();
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug("Method TagServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
+        } catch (RuntimeException exception) {
+            long executionTimeMs = System.currentTimeMillis() - startTime;
+            log.debug(
+                    "Method TagServiceImpl.{} failed in {} ms: {}",
+                    methodName,
+                    executionTimeMs,
+                    exception.getMessage());
+            throw exception;
+        }
     }
 }
