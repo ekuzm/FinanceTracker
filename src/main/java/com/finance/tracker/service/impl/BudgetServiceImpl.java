@@ -36,71 +36,63 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Override
     public BudgetResponse getBudgetById(Long id) {
-        return executeWithLogging("getBudgetById", () -> {
-            Budget budget = budgetRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
-            return budgetMapper.toResponse(budget);
-        });
+        Budget budget = budgetRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+        return budgetMapper.toResponse(budget);
     }
 
     @Override
     public Page<BudgetResponse> getAllBudgets(Pageable pageable) {
-        return executeWithLogging(
-                "getAllBudgets", () -> budgetRepository.findAll(pageable).map(budgetMapper::toResponse));
+        return budgetRepository.findAll(pageable)
+                .map(budgetMapper::toResponse);
     }
 
     @Override
     @Transactional
     public BudgetResponse createBudget(BudgetRequest request) {
-        return executeWithLogging("createBudget", () -> {
-            validateDateRange(request.getStartDate(), request.getEndDate());
-            User user = getUser(request.getUserId());
-            Budget budget = budgetMapper.fromRequest(request, user);
-            Budget saved = budgetRepository.save(budget);
-            invalidateSearchCache();
-            return budgetMapper.toResponse(saved);
-        });
+        validateDateRange(request.getStartDate(), request.getEndDate());
+        User user = getUser(request.getUserId());
+        Budget budget = budgetMapper.fromRequest(request, user);
+        Budget saved = budgetRepository.save(budget);
+        invalidateSearchCache();
+        return budgetMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public BudgetResponse updateBudget(Long id, BudgetRequest request) {
-        return executeWithLogging("updateBudget", () -> {
-            Budget budget = budgetRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
-            if (request.getName() != null) {
-                budget.setName(request.getName());
-            }
-            if (request.getLimitAmount() != null) {
-                budget.setLimitAmount(request.getLimitAmount());
-            }
-            if (request.getStartDate() != null) {
-                budget.setStartDate(request.getStartDate());
-            }
-            if (request.getEndDate() != null) {
-                budget.setEndDate(request.getEndDate());
-            }
-            validateDateRange(budget.getStartDate(), budget.getEndDate());
+        Budget budget = budgetRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+        if (request.getName() != null) {
+            budget.setName(request.getName());
+        }
+        if (request.getLimitAmount() != null) {
+            budget.setLimitAmount(request.getLimitAmount());
+        }
+        if (request.getStartDate() != null) {
+            budget.setStartDate(request.getStartDate());
+        }
+        if (request.getEndDate() != null) {
+            budget.setEndDate(request.getEndDate());
+        }
+        validateDateRange(budget.getStartDate(), budget.getEndDate());
 
-            if (request.getUserId() != null) {
-                budget.setUser(getUser(request.getUserId()));
-            }
+        if (request.getUserId() != null) {
+            budget.setUser(getUser(request.getUserId()));
+        }
 
-            Budget saved = budgetRepository.save(budget);
-            invalidateSearchCache();
-            return budgetMapper.toResponse(saved);
-        });
+        Budget saved = budgetRepository.save(budget);
+        invalidateSearchCache();
+        return budgetMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public void deleteBudget(Long id) {
-        executeWithLogging("deleteBudget", () -> {
-            Budget budget = budgetRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
-            budgetRepository.delete(budget);
-            invalidateSearchCache();
-        });
+        Budget budget = budgetRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+        budgetRepository.delete(budget);
+        invalidateSearchCache();
     }
 
     private User getUser(Long userId) {
@@ -114,41 +106,6 @@ public class BudgetServiceImpl implements BudgetService {
         }
         if (startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate must be <= endDate");
-        }
-    }
-
-    private <T> T executeWithLogging(String methodName, java.util.function.Supplier<T> action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            T result = action.get();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method BudgetServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-            return result;
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug(
-                    "Method BudgetServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
-        }
-    }
-
-    private void executeWithLogging(String methodName, Runnable action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            action.run();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method BudgetServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug(
-                    "Method BudgetServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
         }
     }
 

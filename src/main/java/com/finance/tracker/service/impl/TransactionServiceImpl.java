@@ -40,111 +40,101 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionResponse getTransactionById(Long id) {
-        return executeWithLogging("getTransactionById", () -> {
-            Transaction transaction = transactionRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
-            return transactionMapper.toResponse(transaction);
-        });
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+        return transactionMapper.toResponse(transaction);
     }
 
     @Override
     public List<TransactionResponse> getAllTransactions(boolean withEntityGraph) {
-        return executeWithLogging("getAllTransactions", () -> {
-            List<Transaction> transactions;
-            if (withEntityGraph) {
-                transactions = transactionRepository.findAllTransactionsWithEntityGraph();
-            } else {
-                transactions = transactionRepository.findAllTransactions();
-            }
-            return toResponses(transactions);
-        });
+        List<Transaction> transactions;
+        if (withEntityGraph) {
+            transactions = transactionRepository.findAllTransactionsWithEntityGraph();
+        } else {
+            transactions = transactionRepository.findAllTransactions();
+        }
+        return toResponses(transactions);
     }
 
     @Override
     public List<TransactionResponse> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
-        return executeWithLogging("getTransactionsByDateRange", () -> {
-            if (startDate == null || endDate == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Both startDate and endDate are required for date range filtering");
-            }
-            if (startDate.isAfter(endDate)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be <= endDate");
-            }
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Both startDate and endDate are required for date range filtering");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be <= endDate");
+        }
 
-            LocalDateTime startDateTime = startDate.atStartOfDay();
-            LocalDateTime endDateTime = endDate.atTime(23, 59, 59, 999_999_999);
-            List<Transaction> transactions = transactionRepository.findByOccurredAtBetween(startDateTime, endDateTime);
-            return toResponses(transactions);
-        });
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59, 999_999_999);
+        List<Transaction> transactions = transactionRepository.findByOccurredAtBetween(startDateTime, endDateTime);
+        return toResponses(transactions);
     }
 
     @Override
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request) {
-        return executeWithLogging("createTransaction", () -> {
-            Account account = getAccount(request.getAccountId());
-            List<Tag> tags = getTags(request.getTagIds());
+        Account account = getAccount(request.getAccountId());
+        List<Tag> tags = getTags(request.getTagIds());
 
-            Transaction transaction = transactionMapper.fromRequest(request, account, tags);
+        Transaction transaction = transactionMapper.fromRequest(request, account, tags);
 
-            applyDeltaToAccount(account, request.getType(), request.getAmount());
-            accountRepository.save(account);
-            Transaction saved = transactionRepository.save(transaction);
-            return transactionMapper.toResponse(saved);
-        });
+        applyDeltaToAccount(account, request.getType(), request.getAmount());
+        accountRepository.save(account);
+        Transaction saved = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
-        return executeWithLogging("updateTransaction", () -> {
-            Transaction transaction = transactionRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
-            rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
-            accountRepository.save(transaction.getAccount());
+        rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
+        accountRepository.save(transaction.getAccount());
 
-            Account account = request.getAccountId() != null
-                    ? getAccount(request.getAccountId())
-                    : transaction.getAccount();
-            List<Tag> tags = request.getTagIds() != null
-                    ? getTags(request.getTagIds())
-                    : transaction.getTags();
-            LocalDateTime occurredAt = request.getOccurredAt() != null
-                    ? request.getOccurredAt()
-                    : transaction.getOccurredAt();
-            BigDecimal amount = request.getAmount() != null ? request.getAmount() : transaction.getAmount();
-            String description =
-                    request.getDescription() != null ? request.getDescription() : transaction.getDescription();
-            TransactionType type = request.getType() != null ? request.getType() : transaction.getType();
+        Account account = request.getAccountId() != null
+                ? getAccount(request.getAccountId())
+                : transaction.getAccount();
+        List<Tag> tags = request.getTagIds() != null
+                ? getTags(request.getTagIds())
+                : transaction.getTags();
+        LocalDateTime occurredAt = request.getOccurredAt() != null
+                ? request.getOccurredAt()
+                : transaction.getOccurredAt();
+        BigDecimal amount = request.getAmount() != null ? request.getAmount() : transaction.getAmount();
+        String description = request.getDescription() != null ? request.getDescription() : transaction.getDescription();
+        TransactionType type = request.getType() != null ? request.getType() : transaction.getType();
 
-            transaction.setAccount(account);
-            transaction.setTags(tags);
-            transaction.setOccurredAt(occurredAt);
-            transaction.setAmount(amount);
-            transaction.setDescription(description);
-            transaction.setType(type);
+        transaction.setAccount(account);
+        transaction.setTags(tags);
+        transaction.setOccurredAt(occurredAt);
+        transaction.setAmount(amount);
+        transaction.setDescription(description);
+        transaction.setType(type);
 
-            applyDeltaToAccount(account, type, amount);
-            accountRepository.save(account);
+        applyDeltaToAccount(account, type, amount);
+        accountRepository.save(account);
 
-            Transaction saved = transactionRepository.save(transaction);
-            return transactionMapper.toResponse(saved);
-        });
+        Transaction saved = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public void deleteTransaction(Long id) {
-        executeWithLogging("deleteTransaction", () -> {
-            Transaction transaction = transactionRepository.findById(id).orElseThrow(
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
 
-            rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
-            accountRepository.save(transaction.getAccount());
-            transactionRepository.delete(transaction);
-        });
+        rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
+        accountRepository.save(transaction.getAccount());
+        transactionRepository.delete(transaction);
     }
 
     private Account getAccount(Long accountId) {
@@ -186,40 +176,5 @@ public class TransactionServiceImpl implements TransactionService {
         return transactions.stream()
                 .map(transactionMapper::toResponse)
                 .toList();
-    }
-
-    private <T> T executeWithLogging(String methodName, java.util.function.Supplier<T> action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            T result = action.get();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method TransactionServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-            return result;
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug(
-                    "Method TransactionServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
-        }
-    }
-
-    private void executeWithLogging(String methodName, Runnable action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            action.run();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method TransactionServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug(
-                    "Method TransactionServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
-        }
     }
 }
