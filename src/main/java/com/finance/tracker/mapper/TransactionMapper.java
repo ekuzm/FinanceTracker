@@ -25,7 +25,6 @@ public class TransactionMapper {
         response.setDescription(transaction.getDescription());
         response.setType(transaction.getType());
         response.setAccountId(transaction.getAccount() != null ? transaction.getAccount().getId() : null);
-        response.setAccountName(transaction.getAccount() != null ? transaction.getAccount().getName() : null);
         response.setTagIds(
                 transaction.getTags() != null ? transaction.getTags().stream().map(Tag::getId).toList() : List.of());
 

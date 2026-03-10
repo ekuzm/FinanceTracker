@@ -23,6 +23,5 @@ public class TransactionResponse {
     private String description;
     private TransactionType type;
     private Long accountId;
-    private String accountName;
     private List<Long> tagIds;
 }

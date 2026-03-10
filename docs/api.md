@@ -335,7 +335,6 @@ Query params:
   "description": "Lunch",
   "type": "EXPENSE",
   "accountId": 1,
-  "accountName": "Main Card",
   "tagIds": [1, 2]
 }
 ```
