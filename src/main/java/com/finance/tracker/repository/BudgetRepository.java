@@ -1,7 +1,6 @@
 package com.finance.tracker.repository;
 
 import com.finance.tracker.domain.Budget;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

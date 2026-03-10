@@ -1,5 +1,7 @@
 package com.finance.tracker.service.impl;
 
+import com.finance.tracker.cache.CacheManager;
+import com.finance.tracker.domain.Account;
 import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
@@ -9,10 +11,10 @@ import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.BudgetService;
 
-import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final BudgetRepository budgetRepository;
     private final UserRepository userRepository;
     private final BudgetMapper budgetMapper;
+    private final CacheManager cacheManager;
 
     @Override
     public BudgetResponse getBudgetById(Long id) {
@@ -37,10 +40,9 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     @Override
-    public List<BudgetResponse> getAllBudgets() {
-        return budgetRepository.findAll().stream()
-                .map(budgetMapper::toResponse)
-                .toList();
+    public Page<BudgetResponse> getAllBudgets(Pageable pageable) {
+        return budgetRepository.findAll(pageable)
+                .map(budgetMapper::toResponse);
     }
 
     @Override
@@ -50,6 +52,7 @@ public class BudgetServiceImpl implements BudgetService {
         User user = getUser(request.getUserId());
         Budget budget = budgetMapper.fromRequest(request, user);
         Budget saved = budgetRepository.save(budget);
+        invalidateSearchCache();
         return budgetMapper.toResponse(saved);
     }
 
@@ -77,6 +80,7 @@ public class BudgetServiceImpl implements BudgetService {
         }
 
         Budget saved = budgetRepository.save(budget);
+        invalidateSearchCache();
         return budgetMapper.toResponse(saved);
     }
 
@@ -86,6 +90,7 @@ public class BudgetServiceImpl implements BudgetService {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
         budgetRepository.delete(budget);
+        invalidateSearchCache();
     }
 
     private User getUser(Long userId) {
@@ -100,5 +105,9 @@ public class BudgetServiceImpl implements BudgetService {
         if (startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate must be <= endDate");
         }
+    }
+
+    private void invalidateSearchCache() {
+        cacheManager.invalidate(User.class, Account.class, Budget.class);
     }
 }

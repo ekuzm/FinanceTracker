@@ -14,6 +14,35 @@ REST API сервиса **Finance Tracker**.
 
 Получить список пользователей.
 
+### `GET /api/v1/users/search/account-type/jpql`
+
+Найти пользователей через JPQL по вложенным сущностям `accounts` и `budgets`.
+
+Query params:
+
+- `accountType` - обязательный enum: `CHECKING`, `SAVINGS`, `CREDIT`, `INVESTMENT`, `CASH`
+- `minBudgetLimit` - обязательный lower bound для `budget.limitAmount`
+- `maxBudgetLimit` - обязательный upper bound для `budget.limitAmount`
+
+Пример:
+
+`GET /api/v1/users/search/account-type/jpql?accountType=CHECKING&minBudgetLimit=100&maxBudgetLimit=1000`
+
+Правила:
+
+- пользователь попадает в результат, если у него есть хотя бы один `account` с указанным `type`
+- и хотя бы один `budget`, у которого `limitAmount` попадает в диапазон
+- один пользователь возвращается один раз, даже если у него несколько счетов одного и того же типа
+- ответ возвращается обычным списком пользователей
+
+### `GET /api/v1/users/search/account-type/native`
+
+Тот же поиск, но через native SQL query.
+
+Пример:
+
+`GET /api/v1/users/search/account-type/native?accountType=CHECKING&minBudgetLimit=100&maxBudgetLimit=1000`
+
 ### `GET /api/v1/users/{id}`
 
 Получить пользователя по ID.
@@ -150,7 +179,18 @@ Request:
 
 ### `GET /api/v1/budgets`
 
-Получить список бюджетов.
+Получить список бюджетов с пагинацией.
+
+Query params:
+
+- `page` - опциональный, default `0`
+- `size` - опциональный, default `3`
+- `sortBy` - опциональный, default `id`
+- `ascending` - опциональный, default `true`
+
+Пример:
+
+`GET /api/v1/budgets?page=0&size=3&sortBy=id&ascending=true`
 
 ### `GET /api/v1/budgets/{id}`
 

@@ -1,9 +1,11 @@
 package com.finance.tracker.service.impl;
 
+import com.finance.tracker.cache.CacheManager;
 import com.finance.tracker.domain.Account;
 import com.finance.tracker.domain.Transaction;
 import com.finance.tracker.domain.TransactionType;
 import com.finance.tracker.domain.User;
+import com.finance.tracker.domain.Budget;
 import com.finance.tracker.dto.request.AccountTransferRequest;
 import com.finance.tracker.dto.request.AccountRequest;
 import com.finance.tracker.dto.response.AccountResponse;
@@ -34,6 +36,7 @@ public class AccountServiceImpl implements AccountService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final AccountMapper accountMapper;
+    private final CacheManager cacheManager;
 
     @Override
     public AccountResponse getAccountById(Long id) {
@@ -53,6 +56,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountMapper.fromRequest(request);
         account.setUser(getUser(request.getUserId()));
         Account saved = accountRepository.save(account);
+        invalidateSearchCache();
         return accountMapper.toResponse(saved);
     }
 
@@ -95,6 +99,7 @@ public class AccountServiceImpl implements AccountService {
             account.setUser(newOwner);
         }
         Account saved = accountRepository.save(account);
+        invalidateSearchCache();
         return accountMapper.toResponse(saved);
     }
 
@@ -104,6 +109,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
         accountRepository.delete(account);
+        invalidateSearchCache();
     }
 
     private void executeTransfer(AccountTransferRequest request, boolean failAfterDebit) {
@@ -216,5 +222,9 @@ public class AccountServiceImpl implements AccountService {
 
     private List<AccountResponse> toResponses(List<Account> accounts) {
         return accounts.stream().map(accountMapper::toResponse).toList();
+    }
+
+    private void invalidateSearchCache() {
+        cacheManager.invalidate(User.class, Account.class, Budget.class);
     }
 }

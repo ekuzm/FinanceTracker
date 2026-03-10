@@ -1,14 +1,13 @@
 package com.finance.tracker.controller;
 
+import com.finance.tracker.domain.AccountType;
 import com.finance.tracker.dto.request.UserRequest;
 import com.finance.tracker.dto.response.UserResponse;
 import com.finance.tracker.service.UserService;
-
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
+import java.math.BigDecimal;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,6 +35,28 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(service.getAllUsers());
+    }
+
+    @GetMapping("/search/account-type/jpql")
+    public ResponseEntity<List<UserResponse>> searchUsersWithJpql(
+            @RequestParam("accountType") AccountType accountType,
+            @RequestParam("minBudgetLimit") BigDecimal minBudgetLimit,
+            @RequestParam("maxBudgetLimit") BigDecimal maxBudgetLimit) {
+        return ResponseEntity.ok(service.searchUsersByAccountTypeWithJpql(
+                accountType,
+                minBudgetLimit,
+                maxBudgetLimit));
+    }
+
+    @GetMapping("/search/account-type/native")
+    public ResponseEntity<List<UserResponse>> searchUsersWithNative(
+            @RequestParam("accountType") AccountType accountType,
+            @RequestParam("minBudgetLimit") BigDecimal minBudgetLimit,
+            @RequestParam("maxBudgetLimit") BigDecimal maxBudgetLimit) {
+        return ResponseEntity.ok(service.searchUsersByAccountTypeWithNative(
+                accountType,
+                minBudgetLimit,
+                maxBudgetLimit));
     }
 
     @PostMapping
