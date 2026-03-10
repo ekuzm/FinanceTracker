@@ -2,6 +2,7 @@ package com.finance.tracker.service;
 
 import com.finance.tracker.domain.AccountType;
 import com.finance.tracker.dto.request.UserRequest;
+import com.finance.tracker.dto.request.UserUpdateRequest;
 import com.finance.tracker.dto.response.UserResponse;
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +20,7 @@ public interface UserService {
 
     UserResponse createUser(UserRequest request);
 
-    UserResponse updateUser(Long id, UserRequest user);
+    UserResponse updateUser(Long id, UserUpdateRequest user);
 
     void deleteUser(Long id);
 }

@@ -2,13 +2,17 @@ package com.finance.tracker.service.impl;
 
 import com.finance.tracker.cache.CacheManager;
 import com.finance.tracker.domain.Account;
+import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.Transaction;
 import com.finance.tracker.domain.TransactionType;
 import com.finance.tracker.domain.User;
-import com.finance.tracker.domain.Budget;
 import com.finance.tracker.dto.request.AccountTransferRequest;
 import com.finance.tracker.dto.request.AccountRequest;
+import com.finance.tracker.dto.request.AccountUpdateRequest;
 import com.finance.tracker.dto.response.AccountResponse;
+import com.finance.tracker.exception.BadRequestException;
+import com.finance.tracker.exception.ConflictException;
+import com.finance.tracker.exception.ResourceNotFoundException;
 import com.finance.tracker.mapper.AccountMapper;
 import com.finance.tracker.repository.AccountRepository;
 import com.finance.tracker.repository.TransactionRepository;
@@ -18,18 +22,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-@Slf4j
 public class AccountServiceImpl implements AccountService {
 
     private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found ";
@@ -44,7 +43,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountResponse getAccountById(Long id) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE + id));
         return accountMapper.toResponse(account);
     }
 
@@ -77,9 +76,9 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public AccountResponse updateAccount(Long id, AccountRequest request) {
+    public AccountResponse updateAccount(Long id, AccountUpdateRequest request) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE + id));
         if (request.getName() != null) {
             account.setName(request.getName());
         }
@@ -95,8 +94,7 @@ public class AccountServiceImpl implements AccountService {
             if (currentOwnerId != null
                     && !currentOwnerId.equals(newOwner.getId())
                     && transactionRepository.existsByAccountId(account.getId())) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
+                throw new ConflictException(
                         "Cannot change account owner while account has transactions");
             }
             account.setUser(newOwner);
@@ -110,7 +108,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public void deleteAccount(Long id) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE + id));
         accountRepository.delete(account);
         invalidateSearchCache();
     }
@@ -139,8 +137,7 @@ public class AccountServiceImpl implements AccountService {
                 fromAccount));
 
         if (failAfterDebit) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
+            throw new IllegalStateException(
                     "Forced error after debit operation");
         }
 
@@ -157,18 +154,17 @@ public class AccountServiceImpl implements AccountService {
 
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found " + userId));
     }
 
     private Account getAccount(Long accountId) {
         return accountRepository.findById(accountId)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND_MESSAGE + accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE + accountId));
     }
 
     private void validateAccountsDistinct(Account fromAccount, Account toAccount) {
         if (fromAccount.getId().equals(toAccount.getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and target account must be different");
+            throw new BadRequestException("Source and target account must be different");
         }
     }
 
@@ -176,23 +172,19 @@ public class AccountServiceImpl implements AccountService {
         Long fromUserId = fromAccount.getUser() != null ? fromAccount.getUser().getId() : null;
         Long toUserId = toAccount.getUser() != null ? toAccount.getUser().getId() : null;
         if (fromUserId == null || !fromUserId.equals(toUserId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Both accounts must belong to the same user");
+            throw new ConflictException("Both accounts must belong to the same user");
         }
     }
 
     private void validatePositiveAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transfer amount must be > 0");
+            throw new BadRequestException("Transfer amount must be > 0");
         }
     }
 
     private void validateSufficientFunds(Account fromAccount, BigDecimal amount) {
         if (fromAccount.getBalance().compareTo(amount) < 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Insufficient funds on source account " + fromAccount.getId());
+            throw new ConflictException("Insufficient funds on source account " + fromAccount.getId());
         }
     }
 
@@ -202,7 +194,7 @@ public class AccountServiceImpl implements AccountService {
         }
         String normalized = note.trim();
         if (normalized.length() > 255) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transfer note length must be <= 255");
+            throw new BadRequestException("Transfer note length must be <= 255");
         }
         return normalized;
     }

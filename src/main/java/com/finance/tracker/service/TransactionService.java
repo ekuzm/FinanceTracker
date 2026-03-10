@@ -1,6 +1,7 @@
 package com.finance.tracker.service;
 
 import com.finance.tracker.dto.request.TransactionRequest;
+import com.finance.tracker.dto.request.TransactionUpdateRequest;
 import com.finance.tracker.dto.response.TransactionResponse;
 
 import java.time.LocalDate;
@@ -16,7 +17,7 @@ public interface TransactionService {
 
     TransactionResponse createTransaction(TransactionRequest request);
 
-    TransactionResponse updateTransaction(Long id, TransactionRequest request);
+    TransactionResponse updateTransaction(Long id, TransactionUpdateRequest request);
 
     void deleteTransaction(Long id);
 }

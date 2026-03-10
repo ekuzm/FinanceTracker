@@ -2,6 +2,7 @@ package com.finance.tracker.service;
 
 import com.finance.tracker.dto.request.AccountTransferRequest;
 import com.finance.tracker.dto.request.AccountRequest;
+import com.finance.tracker.dto.request.AccountUpdateRequest;
 import com.finance.tracker.dto.response.AccountResponse;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public interface AccountService {
 
     void createTransferNoTx(AccountTransferRequest request, boolean failAfterDebit);
 
-    AccountResponse updateAccount(Long id, AccountRequest request);
+    AccountResponse updateAccount(Long id, AccountUpdateRequest request);
 
     void deleteAccount(Long id);
 }

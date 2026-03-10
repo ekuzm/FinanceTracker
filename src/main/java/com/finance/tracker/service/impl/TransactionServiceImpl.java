@@ -5,30 +5,26 @@ import com.finance.tracker.domain.Tag;
 import com.finance.tracker.domain.Transaction;
 import com.finance.tracker.domain.TransactionType;
 import com.finance.tracker.dto.request.TransactionRequest;
+import com.finance.tracker.dto.request.TransactionUpdateRequest;
 import com.finance.tracker.dto.response.TransactionResponse;
+import com.finance.tracker.exception.BadRequestException;
+import com.finance.tracker.exception.ResourceNotFoundException;
 import com.finance.tracker.mapper.TransactionMapper;
 import com.finance.tracker.repository.AccountRepository;
 import com.finance.tracker.repository.TagRepository;
 import com.finance.tracker.repository.TransactionRepository;
 import com.finance.tracker.service.TransactionService;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-@Slf4j
 public class TransactionServiceImpl implements TransactionService {
 
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found ";
@@ -41,8 +37,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public TransactionResponse getTransactionById(Long id) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE + id));
         return transactionMapper.toResponse(transaction);
     }
 
@@ -60,12 +55,10 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<TransactionResponse> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Both startDate and endDate are required for date range filtering");
+            throw new BadRequestException("Both startDate and endDate are required for date range filtering");
         }
         if (startDate.isAfter(endDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be <= endDate");
+            throw new BadRequestException("startDate must be <= endDate");
         }
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
@@ -90,10 +83,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
+    public TransactionResponse updateTransaction(Long id, TransactionUpdateRequest request) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE + id));
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
@@ -129,8 +121,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public void deleteTransaction(Long id) {
         Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, TRANSACTION_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE + id));
 
         rollbackDeltaFromAccount(transaction.getAccount(), transaction.getType(), transaction.getAmount());
         accountRepository.save(transaction.getAccount());
@@ -139,8 +130,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private Account getAccount(Long accountId) {
         return accountRepository.findById(accountId)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + accountId));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found: " + accountId));
     }
 
     private List<Tag> getTags(List<Long> tagIds) {
@@ -150,7 +140,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         List<Tag> tags = tagRepository.findAllById(tagIds);
         if (tags.size() != tagIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some tags not found");
+            throw new ResourceNotFoundException("Some tags not found");
         }
         return tags;
     }

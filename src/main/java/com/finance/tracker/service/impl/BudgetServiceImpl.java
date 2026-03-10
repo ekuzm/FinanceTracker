@@ -5,26 +5,23 @@ import com.finance.tracker.domain.Account;
 import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
+import com.finance.tracker.dto.request.BudgetUpdateRequest;
 import com.finance.tracker.dto.response.BudgetResponse;
+import com.finance.tracker.exception.BadRequestException;
+import com.finance.tracker.exception.ResourceNotFoundException;
 import com.finance.tracker.mapper.BudgetMapper;
 import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.service.BudgetService;
-
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-@Slf4j
 public class BudgetServiceImpl implements BudgetService {
 
     private static final String BUDGET_NOT_FOUND_MESSAGE = "Budget not found ";
@@ -37,7 +34,7 @@ public class BudgetServiceImpl implements BudgetService {
     @Override
     public BudgetResponse getBudgetById(Long id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(BUDGET_NOT_FOUND_MESSAGE + id));
         return budgetMapper.toResponse(budget);
     }
 
@@ -60,9 +57,9 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Override
     @Transactional
-    public BudgetResponse updateBudget(Long id, BudgetRequest request) {
+    public BudgetResponse updateBudget(Long id, BudgetUpdateRequest request) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(BUDGET_NOT_FOUND_MESSAGE + id));
         if (request.getName() != null) {
             budget.setName(request.getName());
         }
@@ -90,22 +87,22 @@ public class BudgetServiceImpl implements BudgetService {
     @Transactional
     public void deleteBudget(Long id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, BUDGET_NOT_FOUND_MESSAGE + id));
+                .orElseThrow(() -> new ResourceNotFoundException(BUDGET_NOT_FOUND_MESSAGE + id));
         budgetRepository.delete(budget);
         invalidateSearchCache();
     }
 
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 
     private void validateDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
         if (startDate == null || endDate == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate and endDate are required");
+            throw new BadRequestException("Budget startDate and endDate are required");
         }
         if (startDate.isAfter(endDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget startDate must be <= endDate");
+            throw new BadRequestException("Budget startDate must be <= endDate");
         }
     }
 

@@ -2,12 +2,15 @@ package com.finance.tracker.service.impl;
 
 import com.finance.tracker.cache.CacheKey;
 import com.finance.tracker.cache.CacheManager;
-import com.finance.tracker.domain.AccountType;
 import com.finance.tracker.domain.Account;
+import com.finance.tracker.domain.AccountType;
 import com.finance.tracker.domain.Budget;
 import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.UserRequest;
+import com.finance.tracker.dto.request.UserUpdateRequest;
 import com.finance.tracker.dto.response.UserResponse;
+import com.finance.tracker.exception.ConflictException;
+import com.finance.tracker.exception.ResourceNotFoundException;
 import com.finance.tracker.mapper.UserMapper;
 import com.finance.tracker.repository.AccountRepository;
 import com.finance.tracker.repository.BudgetRepository;
@@ -16,16 +19,12 @@ import com.finance.tracker.service.UserService;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -36,109 +35,95 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUserById(Long id) {
-        return executeWithLogging("getUserById", () -> {
-            CacheKey cacheKey = buildCacheKey("getUserById", id);
-            return cacheManager.computeIfAbsent(cacheKey, () -> {
-                User user = userRepository.findById(id)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found " + id));
-                return userMapper.toResponse(user);
-            });
+        CacheKey cacheKey = buildCacheKey("getUserById", id);
+        return cacheManager.computeIfAbsent(cacheKey, () -> {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found " + id));
+            return userMapper.toResponse(user);
         });
     }
 
     @Override
     public List<UserResponse> getAllUsers() {
-        return executeWithLogging("getAllUsers", () -> {
-            CacheKey cacheKey = buildCacheKey("getAllUsers");
-            return cacheManager.computeIfAbsent(cacheKey, () -> toResponses(userRepository.findAll()));
-        });
+        CacheKey cacheKey = buildCacheKey("getAllUsers");
+        return cacheManager.computeIfAbsent(cacheKey, () -> toResponses(userRepository.findAll()));
     }
 
     @Override
     public List<UserResponse> searchUsersByAccountTypeWithJpql(
             AccountType accountType, BigDecimal minBudgetLimit, BigDecimal maxBudgetLimit) {
-        return executeWithLogging("searchUsersByAccountTypeWithJpql", () -> {
-            CacheKey cacheKey = buildSearchCacheKey(
-                    "searchUsersByAccountTypeWithJpql", accountType, minBudgetLimit, maxBudgetLimit);
-            return cacheManager.computeIfAbsent(cacheKey, () -> userRepository
-                    .findUsersByAccountTypeWithJpql(accountType, minBudgetLimit, maxBudgetLimit)
-                    .stream()
-                    .map(userMapper::toResponse)
-                    .toList());
-        });
+        CacheKey cacheKey = buildSearchCacheKey(
+                "searchUsersByAccountTypeWithJpql", accountType, minBudgetLimit, maxBudgetLimit);
+        return cacheManager.computeIfAbsent(cacheKey, () -> userRepository
+                .findUsersByAccountTypeWithJpql(accountType, minBudgetLimit, maxBudgetLimit)
+                .stream()
+                .map(userMapper::toResponse)
+                .toList());
     }
 
     @Override
     public List<UserResponse> searchUsersByAccountTypeWithNative(
             AccountType accountType, BigDecimal minBudgetLimit, BigDecimal maxBudgetLimit) {
-        return executeWithLogging("searchUsersByAccountTypeWithNative", () -> {
-            CacheKey cacheKey = buildSearchCacheKey(
-                    "searchUsersByAccountTypeWithNative", accountType, minBudgetLimit, maxBudgetLimit);
-            return cacheManager.computeIfAbsent(cacheKey, () -> userRepository
-                    .findUsersByAccountTypeWithNative(accountType.name(), minBudgetLimit, maxBudgetLimit)
-                    .stream()
-                    .map(userMapper::toResponse)
-                    .toList());
-        });
+        CacheKey cacheKey = buildSearchCacheKey(
+                "searchUsersByAccountTypeWithNative", accountType, minBudgetLimit, maxBudgetLimit);
+        return cacheManager.computeIfAbsent(cacheKey, () -> userRepository
+                .findUsersByAccountTypeWithNative(accountType.name(), minBudgetLimit, maxBudgetLimit)
+                .stream()
+                .map(userMapper::toResponse)
+                .toList());
     }
 
     @Override
     @Transactional
     public UserResponse createUser(UserRequest request) {
-        return executeWithLogging("createUser", () -> {
-            List<Account> accounts = getAccounts(request.getAccountIds());
-            List<Budget> budgets = getBudgets(request.getBudgetIds());
-            ensureAssignableAccounts(accounts, null);
-            ensureAssignableBudgets(budgets, null);
-            User user = userMapper.fromRequest(request, accounts, budgets);
-            User saved = userRepository.save(user);
-            invalidateSearchCache();
-            return userMapper.toResponse(saved);
-        });
+        List<Account> accounts = getAccounts(request.getAccountIds());
+        List<Budget> budgets = getBudgets(request.getBudgetIds());
+        ensureAssignableAccounts(accounts, null);
+        ensureAssignableBudgets(budgets, null);
+        User user = userMapper.fromRequest(request, accounts, budgets);
+        User saved = userRepository.save(user);
+        invalidateSearchCache();
+        return userMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
-    public UserResponse updateUser(Long id, UserRequest request) {
-        return executeWithLogging("updateUser", () -> {
-            User user = userRepository.findById(id)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found " + id));
-            if (request.getUsername() != null) {
-                user.setUsername(request.getUsername());
-            }
-            if (request.getEmail() != null) {
-                user.setEmail(request.getEmail());
-            }
-            if (request.getAccountIds() != null) {
-                List<Account> accounts = getAccounts(request.getAccountIds());
-                ensureAssignableAccounts(accounts, user.getId());
-                user.getAccounts().forEach(a -> a.setUser(null));
-                user.setAccounts(accounts);
-                accounts.forEach(a -> a.setUser(user));
-            }
-            if (request.getBudgetIds() != null) {
-                List<Budget> budgets = getBudgets(request.getBudgetIds());
-                ensureAssignableBudgets(budgets, user.getId());
-                user.getBudgets().forEach(b -> b.setUser(null));
-                user.setBudgets(budgets);
-                budgets.forEach(b -> b.setUser(user));
-            }
-            User saved = userRepository.save(user);
-            invalidateSearchCache();
-            return userMapper.toResponse(saved);
-        });
+    public UserResponse updateUser(Long id, UserUpdateRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found " + id));
+        if (request.getUsername() != null) {
+            user.setUsername(request.getUsername());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        if (request.getAccountIds() != null) {
+            List<Account> accounts = getAccounts(request.getAccountIds());
+            ensureAssignableAccounts(accounts, user.getId());
+            user.getAccounts().forEach(account -> account.setUser(null));
+            user.setAccounts(accounts);
+            accounts.forEach(account -> account.setUser(user));
+        }
+        if (request.getBudgetIds() != null) {
+            List<Budget> budgets = getBudgets(request.getBudgetIds());
+            ensureAssignableBudgets(budgets, user.getId());
+            user.getBudgets().forEach(budget -> budget.setUser(null));
+            user.setBudgets(budgets);
+            budgets.forEach(budget -> budget.setUser(user));
+        }
+        User saved = userRepository.save(user);
+        invalidateSearchCache();
+        return userMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        executeWithLogging("deleteUser", () -> {
-            if (!userRepository.existsById(id)) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found " + id);
-            }
-            userRepository.deleteById(id);
-            invalidateSearchCache();
-        });
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException("User not found " + id);
+        }
+        userRepository.deleteById(id);
+        invalidateSearchCache();
     }
 
     private List<Account> getAccounts(List<Long> accountIds) {
@@ -147,7 +132,7 @@ public class UserServiceImpl implements UserService {
         }
         List<Account> accounts = accountRepository.findAllById(accountIds);
         if (accounts.size() != accountIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some accounts not found");
+            throw new ResourceNotFoundException("Some accounts not found");
         }
         return accounts;
     }
@@ -158,7 +143,7 @@ public class UserServiceImpl implements UserService {
         }
         List<Budget> budgets = budgetRepository.findAllById(budgetIds);
         if (budgets.size() != budgetIds.size()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Some budgets not found");
+            throw new ResourceNotFoundException("Some budgets not found");
         }
         return budgets;
     }
@@ -176,39 +161,6 @@ public class UserServiceImpl implements UserService {
         return buildCacheKey(methodName, accountType, minBudgetLimit, maxBudgetLimit);
     }
 
-    private <T> T executeWithLogging(String methodName, java.util.function.Supplier<T> action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            T result = action.get();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method UserServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-            return result;
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method UserServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
-        }
-    }
-
-    private void executeWithLogging(String methodName, Runnable action) {
-        long startTime = System.currentTimeMillis();
-        try {
-            action.run();
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method UserServiceImpl.{} completed in {} ms", methodName, executionTimeMs);
-        } catch (RuntimeException exception) {
-            long executionTimeMs = System.currentTimeMillis() - startTime;
-            log.debug("Method UserServiceImpl.{} failed in {} ms: {}",
-                    methodName,
-                    executionTimeMs,
-                    exception.getMessage());
-            throw exception;
-        }
-    }
-
     private void invalidateSearchCache() {
         cacheManager.invalidate(User.class, Account.class, Budget.class);
     }
@@ -220,8 +172,7 @@ public class UserServiceImpl implements UserService {
                     currentUserId != null && hasOwner && currentUserId.equals(account.getUser().getId());
 
             if (hasOwner && !belongsToCurrentUser) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT, "Account " + account.getId() + " already belongs to another user");
+                throw new ConflictException("Account " + account.getId() + " already belongs to another user");
             }
         }
     }
@@ -233,8 +184,7 @@ public class UserServiceImpl implements UserService {
                     currentUserId != null && hasOwner && currentUserId.equals(budget.getUser().getId());
 
             if (hasOwner && !belongsToCurrentUser) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT, "Budget " + budget.getId() + " already belongs to another user");
+                throw new ConflictException("Budget " + budget.getId() + " already belongs to another user");
             }
         }
     }
