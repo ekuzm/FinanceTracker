@@ -16,7 +16,7 @@
 
 ## Связи таблиц
 
-<img width="758" height="603" alt="ER-diagram" src="https://github.com/user-attachments/assets/aac5c160-384e-4b68-84e5-a70feaea4e2b" />
+<img width="618" height="744" alt="image" src="https://github.com/user-attachments/assets/ae27d4f3-41e1-41b0-9cea-f96f756a61c5" />
 
 ## API
 
