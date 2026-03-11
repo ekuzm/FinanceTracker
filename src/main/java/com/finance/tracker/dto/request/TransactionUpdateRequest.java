@@ -3,7 +3,7 @@ package com.finance.tracker.dto.request;
 import com.finance.tracker.domain.TransactionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -26,7 +26,7 @@ public class TransactionUpdateRequest {
     @DecimalMin(value = "0.01")
     private BigDecimal amount;
 
-    @NotBlank(message = "must not be blank")
+    @Pattern(regexp = ".*\\S.*", message = "must not be blank")
     @Size(min = 3, max = 255)
     private String description;
 

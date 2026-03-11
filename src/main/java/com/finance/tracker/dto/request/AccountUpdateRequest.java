@@ -4,8 +4,8 @@ import com.finance.tracker.domain.AccountType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,7 +19,7 @@ import lombok.Setter;
 @Schema(description = "Request body for partially updating an account.")
 public class AccountUpdateRequest {
 
-    @NotBlank(message = "must not be blank")
+    @Pattern(regexp = ".*\\S.*", message = "must not be blank")
     @Size(min = 3, max = 50)
     private String name;
 

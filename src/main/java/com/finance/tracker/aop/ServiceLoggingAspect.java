@@ -1,5 +1,6 @@
 package com.finance.tracker.aop;
 
+import com.finance.tracker.exception.ApiException;
 import com.finance.tracker.exception.LoggingException;
 import java.util.Arrays;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -58,7 +59,11 @@ public class ServiceLoggingAspect {
             }
 
             return result;
+        } catch (ApiException exception) {
+            LOGGER.warn("Method {} failed with API exception: {}", fullMethodName, exception.getMessage());
+            throw exception;
         } catch (Exception exception) {
+            LOGGER.error("Unexpected error while executing method {}", fullMethodName, exception);
             throw new LoggingException(ERROR_EXECUTING_METHOD + " " + fullMethodName, exception);
         }
     }
