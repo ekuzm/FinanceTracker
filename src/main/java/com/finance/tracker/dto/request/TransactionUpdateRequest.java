@@ -26,7 +26,7 @@ public class TransactionUpdateRequest {
     @DecimalMin(value = "0.01")
     private BigDecimal amount;
 
-    @Pattern(regexp = ".*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "\\s*+\\S.*", message = "must not be blank")
     @Size(min = 3, max = 255)
     private String description;
 

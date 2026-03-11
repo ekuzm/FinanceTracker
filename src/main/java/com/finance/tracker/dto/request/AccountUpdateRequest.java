@@ -19,7 +19,7 @@ import lombok.Setter;
 @Schema(description = "Request body for partially updating an account.")
 public class AccountUpdateRequest {
 
-    @Pattern(regexp = ".*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "\\s*+\\S.*", message = "must not be blank")
     @Size(min = 3, max = 50)
     private String name;
 
