@@ -88,9 +88,11 @@ class TransactionServiceImplTest {
 
     @Test
     void createTransactionsBulkTxShouldRejectEmptyRequest() {
+        List<TransactionRequest> requests = List.of();
+
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> service.createTransactionsBulkTx(List.of()));
+                () -> service.createTransactionsBulkTx(requests));
 
         assertTrue(exception.getMessage().contains("at least one item"));
         verify(accountRepository, never()).findById(any());
