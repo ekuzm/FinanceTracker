@@ -15,17 +15,21 @@ import com.finance.tracker.domain.User;
 import com.finance.tracker.dto.request.BudgetRequest;
 import com.finance.tracker.dto.request.BudgetUpdateRequest;
 import com.finance.tracker.exception.BadRequestException;
+import com.finance.tracker.exception.ResourceNotFoundException;
 import com.finance.tracker.mapper.BudgetMapper;
 import com.finance.tracker.repository.BudgetRepository;
 import com.finance.tracker.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class BudgetServiceImplTest {
@@ -43,6 +47,34 @@ class BudgetServiceImplTest {
     void setUp() {
         cacheManager = spy(new CacheManager());
         service = new BudgetServiceImpl(budgetRepository, userRepository, new BudgetMapper(), cacheManager);
+    }
+
+    @Test
+    void getBudgetByIdShouldReturnMappedBudget() {
+        Budget budget = budget(1L, user(3L));
+        when(budgetRepository.findById(1L)).thenReturn(Optional.of(budget));
+
+        var response = service.getBudgetById(1L);
+
+        assertEquals(1L, response.getId());
+        assertEquals(3L, response.getUserId());
+    }
+
+    @Test
+    void getBudgetByIdShouldThrowWhenMissing() {
+        when(budgetRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.getBudgetById(1L));
+    }
+
+    @Test
+    void getAllBudgetsShouldReturnMappedPage() {
+        when(budgetRepository.findAll(PageRequest.of(0, 2))).thenReturn(new PageImpl<>(List.of(budget(1L, user(2L)))));
+
+        var page = service.getAllBudgets(PageRequest.of(0, 2));
+
+        assertEquals(1, page.getContent().size());
+        assertEquals(1L, page.getContent().get(0).getId());
     }
 
     @Test
@@ -86,6 +118,27 @@ class BudgetServiceImplTest {
     }
 
     @Test
+    void createBudgetShouldThrowWhenUserIsMissing() {
+        BudgetRequest request = new BudgetRequest(
+                "Food",
+                new BigDecimal("200.00"),
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 3, 31),
+                1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.createBudget(request));
+    }
+
+    @Test
+    void createBudgetShouldRejectNullStartDate() {
+        BudgetRequest request =
+                new BudgetRequest("Food", new BigDecimal("200.00"), null, LocalDate.of(2026, 3, 31), 1L);
+
+        assertThrows(BadRequestException.class, () -> service.createBudget(request));
+    }
+
+    @Test
     void updateBudgetShouldMergeFieldsWithExistingState() {
         User user = user(1L);
         Budget budget = budget(5L, user);
@@ -102,6 +155,64 @@ class BudgetServiceImplTest {
         assertEquals(LocalDate.of(2026, 4, 5), response.getEndDate());
         assertEquals(0, new BigDecimal("450.00").compareTo(response.getLimitAmount()));
         verify(cacheManager).invalidate(User.class, Account.class, Budget.class);
+    }
+
+    @Test
+    void updateBudgetShouldChangeOwnerAndInvalidateCache() {
+        Budget budget = budget(5L, user(1L));
+        User newUser = user(9L);
+        BudgetUpdateRequest request = new BudgetUpdateRequest();
+        request.setName("Travel");
+        request.setLimitAmount(new BigDecimal("500.00"));
+        request.setStartDate(LocalDate.of(2026, 4, 1));
+        request.setEndDate(LocalDate.of(2026, 4, 30));
+        request.setUserId(9L);
+
+        when(budgetRepository.findById(5L)).thenReturn(Optional.of(budget));
+        when(userRepository.findById(9L)).thenReturn(Optional.of(newUser));
+        when(budgetRepository.save(any(Budget.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.updateBudget(5L, request);
+
+        assertEquals("Travel", response.getName());
+        assertEquals(9L, response.getUserId());
+        verify(cacheManager).invalidate(User.class, Account.class, Budget.class);
+    }
+
+    @Test
+    void updateBudgetShouldThrowWhenBudgetIsMissing() {
+        when(budgetRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.updateBudget(10L, new BudgetUpdateRequest()));
+    }
+
+    @Test
+    void updateBudgetShouldRejectNullEndDateAfterPatch() {
+        Budget budget = budget(5L, user(1L));
+        budget.setEndDate(null);
+        BudgetUpdateRequest request = new BudgetUpdateRequest();
+        request.setStartDate(LocalDate.of(2026, 4, 1));
+
+        when(budgetRepository.findById(5L)).thenReturn(Optional.of(budget));
+
+        assertThrows(BadRequestException.class, () -> service.updateBudget(5L, request));
+    }
+
+    @Test
+    void deleteBudgetShouldDeleteExistingBudget() {
+        when(budgetRepository.findById(2L)).thenReturn(Optional.of(budget(2L, user(1L))));
+
+        service.deleteBudget(2L);
+
+        verify(budgetRepository).delete(any(Budget.class));
+        verify(cacheManager).invalidate(User.class, Account.class, Budget.class);
+    }
+
+    @Test
+    void deleteBudgetShouldThrowWhenMissing() {
+        when(budgetRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteBudget(2L));
     }
 
     private static User user(Long id) {
