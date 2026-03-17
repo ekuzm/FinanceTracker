@@ -179,6 +179,10 @@
 									<goal>report</goal>
 								</goals>
 								<configuration>
+									<includes>
+										<include>com/finance/tracker/service/*</include>
+										<include>com/finance/tracker/service/impl/*</include>
+									</includes>
 									<formats>
 										<format>XML</format>
 									</formats>
