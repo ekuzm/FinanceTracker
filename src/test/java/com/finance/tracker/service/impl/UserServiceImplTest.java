@@ -118,31 +118,34 @@ class UserServiceImplTest {
 
     @Test
     void createUserShouldThrowWhenSomeAccountsAreMissing() {
+        UserRequest request = new UserRequest("alex", "alex@example.com", List.of(1L, 2L), List.of());
         when(accountRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(account(1L, null)));
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.createUser(new UserRequest("alex", "alex@example.com", List.of(1L, 2L), List.of())));
+                () -> service.createUser(request));
     }
 
     @Test
     void createUserShouldThrowWhenSomeBudgetsAreMissing() {
+        UserRequest request = new UserRequest("alex", "alex@example.com", List.of(), List.of(5L, 6L));
         when(budgetRepository.findAllById(List.of(5L, 6L))).thenReturn(List.of(budget(5L, null)));
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.createUser(new UserRequest("alex", "alex@example.com", List.of(), List.of(5L, 6L))));
+                () -> service.createUser(request));
     }
 
     @Test
     void createUserShouldRejectBudgetOwnedByAnotherUser() {
         Budget foreignBudget = budget(7L, user(99L, "owner", "owner@example.com"));
+        UserRequest request = new UserRequest("alex", "alex@example.com", List.of(), List.of(7L));
 
         when(budgetRepository.findAllById(List.of(7L))).thenReturn(List.of(foreignBudget));
 
         assertThrows(
                 ConflictException.class,
-                () -> service.createUser(new UserRequest("alex", "alex@example.com", List.of(), List.of(7L))));
+                () -> service.createUser(request));
     }
 
     @Test
@@ -263,9 +266,10 @@ class UserServiceImplTest {
 
     @Test
     void updateUserShouldThrowWhenUserIsMissing() {
+        UserUpdateRequest request = new UserUpdateRequest();
         when(userRepository.findById(77L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.updateUser(77L, new UserUpdateRequest()));
+        assertThrows(ResourceNotFoundException.class, () -> service.updateUser(77L, request));
     }
 
     @Test

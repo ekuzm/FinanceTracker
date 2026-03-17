@@ -181,9 +181,10 @@ class BudgetServiceImplTest {
 
     @Test
     void updateBudgetShouldThrowWhenBudgetIsMissing() {
+        BudgetUpdateRequest request = new BudgetUpdateRequest();
         when(budgetRepository.findById(10L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.updateBudget(10L, new BudgetUpdateRequest()));
+        assertThrows(ResourceNotFoundException.class, () -> service.updateBudget(10L, request));
     }
 
     @Test

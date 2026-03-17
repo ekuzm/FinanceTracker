@@ -105,23 +105,30 @@ class TransactionServiceImplTest {
 
     @Test
     void getTransactionsByDateRangeShouldRejectMissingDates() {
+        LocalDate endDate = LocalDate.of(2026, 3, 31);
+
         assertThrows(
                 BadRequestException.class,
-                () -> service.getTransactionsByDateRange(null, LocalDate.of(2026, 3, 31)));
+                () -> service.getTransactionsByDateRange(null, endDate));
     }
 
     @Test
     void getTransactionsByDateRangeShouldRejectMissingEndDate() {
+        LocalDate startDate = LocalDate.of(2026, 3, 1);
+
         assertThrows(
                 BadRequestException.class,
-                () -> service.getTransactionsByDateRange(LocalDate.of(2026, 3, 1), null));
+                () -> service.getTransactionsByDateRange(startDate, null));
     }
 
     @Test
     void getTransactionsByDateRangeShouldRejectReversedDates() {
+        LocalDate startDate = LocalDate.of(2026, 3, 31);
+        LocalDate endDate = LocalDate.of(2026, 3, 1);
+
         assertThrows(
                 BadRequestException.class,
-                () -> service.getTransactionsByDateRange(LocalDate.of(2026, 3, 31), LocalDate.of(2026, 3, 1)));
+                () -> service.getTransactionsByDateRange(startDate, endDate));
     }
 
     @Test
@@ -292,11 +299,12 @@ class TransactionServiceImplTest {
 
     @Test
     void updateTransactionShouldThrowWhenTransactionIsMissing() {
+        TransactionUpdateRequest request = new TransactionUpdateRequest();
         when(transactionRepository.findById(5L)).thenReturn(Optional.empty());
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.updateTransaction(5L, new TransactionUpdateRequest()));
+                () -> service.updateTransaction(5L, request));
     }
 
     @Test

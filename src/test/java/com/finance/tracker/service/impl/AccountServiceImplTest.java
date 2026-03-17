@@ -194,9 +194,10 @@ class AccountServiceImplTest {
 
     @Test
     void updateAccountShouldThrowWhenAccountIsMissing() {
+        AccountUpdateRequest request = new AccountUpdateRequest();
         when(accountRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.updateAccount(1L, new AccountUpdateRequest()));
+        assertThrows(ResourceNotFoundException.class, () -> service.updateAccount(1L, request));
     }
 
     @Test

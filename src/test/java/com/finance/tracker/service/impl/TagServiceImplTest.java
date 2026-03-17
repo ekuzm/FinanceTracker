@@ -107,9 +107,10 @@ class TagServiceImplTest {
 
     @Test
     void updateTagShouldThrowWhenTagIsMissing() {
+        TagUpdateRequest request = new TagUpdateRequest();
         when(tagRepository.findById(9L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.updateTag(9L, new TagUpdateRequest()));
+        assertThrows(ResourceNotFoundException.class, () -> service.updateTag(9L, request));
     }
 
     @Test
