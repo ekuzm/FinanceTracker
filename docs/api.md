@@ -499,6 +499,107 @@ Query params:
 }
 ```
 
+### `POST /api/v1/transactions/bulk`
+
+Массово импортирует список транзакций.
+
+Query params:
+
+- `transactional` - optional, default `true`
+
+Request:
+
+```json
+[
+  {
+    "occurredAt": "2026-03-08T08:00:00",
+    "amount": 1200.00,
+    "description": "Salary",
+    "type": "INCOME",
+    "accountId": 1,
+    "tagIds": [1]
+  },
+  {
+    "occurredAt": "2026-03-08T12:30:00",
+    "amount": 35.00,
+    "description": "Lunch",
+    "type": "EXPENSE",
+    "accountId": 1,
+    "tagIds": [2, 3]
+  }
+]
+```
+
+Правила:
+
+- request body должен содержать хотя бы один объект, пустой список -> `400`
+- каждый элемент валидируется по тем же правилам, что и обычный `POST /api/v1/transactions`
+- баланс счета пересчитывается после каждой транзакции в порядке элементов списка
+- `transactional=true`: весь bulk-импорт атомарный, при ошибке откатываются все уже обработанные элементы
+- `transactional=false`: каждый успешно обработанный элемент успевает сохраниться, даже если позже один из элементов завершится ошибкой
+
+Пример ответа:
+
+```json
+[
+  {
+    "id": 201,
+    "occurredAt": "2026-03-08T08:00:00",
+    "amount": 1200.00,
+    "description": "Salary",
+    "type": "INCOME",
+    "accountId": 1,
+    "tagIds": [1]
+  },
+  {
+    "id": 202,
+    "occurredAt": "2026-03-08T12:30:00",
+    "amount": 35.00,
+    "description": "Lunch",
+    "type": "EXPENSE",
+    "accountId": 1,
+    "tagIds": [2, 3]
+  }
+]
+```
+
+Демонстрация разницы в состоянии БД:
+
+Пусть у счета `id=1` начальный баланс `1000.00`, а в таблице `transactions` для него пока нет новых записей из примера ниже.
+
+Запрос:
+
+```json
+[
+  {
+    "occurredAt": "2026-03-17T09:00:00",
+    "amount": 100.00,
+    "description": "Groceries",
+    "type": "EXPENSE",
+    "accountId": 1,
+    "tagIds": []
+  },
+  {
+    "occurredAt": "2026-03-17T10:00:00",
+    "amount": 50.00,
+    "description": "Invalid account demo",
+    "type": "EXPENSE",
+    "accountId": 999,
+    "tagIds": []
+  }
+]
+```
+
+- `POST /api/v1/transactions/bulk?transactional=true`
+  - второй элемент завершится `404 Account not found: 999`
+  - баланс счета `1` останется `1000.00`
+  - в БД не появится ни одной новой транзакции из этого bulk-запроса
+- `POST /api/v1/transactions/bulk?transactional=false`
+  - второй элемент завершится той же ошибкой `404`
+  - первая транзакция `"Groceries"` сохранится
+  - баланс счета `1` станет `900.00`
+  - в БД появится одна новая транзакция из bulk-запроса
+
 ### `PATCH /api/v1/transactions/{id}`
 
 Частично обновляет транзакцию.

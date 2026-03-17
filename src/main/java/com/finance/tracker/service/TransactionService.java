@@ -17,6 +17,10 @@ public interface TransactionService {
 
     TransactionResponse createTransaction(TransactionRequest request);
 
+    List<TransactionResponse> createTransactionsBulkTx(List<TransactionRequest> requests);
+
+    List<TransactionResponse> createTransactionsBulkNoTx(List<TransactionRequest> requests);
+
     TransactionResponse updateTransaction(Long id, TransactionUpdateRequest request);
 
     void deleteTransaction(Long id);

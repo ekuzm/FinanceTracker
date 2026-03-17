@@ -48,6 +48,16 @@ public class TransactionController implements TransactionControllerApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/api/v1/transactions/bulk")
+    public ResponseEntity<List<TransactionResponse>> createTransactionsBulk(
+            @Valid @RequestBody List<@Valid TransactionRequest> requests,
+            @RequestParam(defaultValue = "true") boolean transactional) {
+        List<TransactionResponse> response = transactional
+                ? service.createTransactionsBulkTx(requests)
+                : service.createTransactionsBulkNoTx(requests);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @PatchMapping("/api/v1/transactions/{id}")
     public ResponseEntity<TransactionResponse> updateTransaction(@PathVariable("id") Long id,
             @Valid @RequestBody TransactionUpdateRequest request) {

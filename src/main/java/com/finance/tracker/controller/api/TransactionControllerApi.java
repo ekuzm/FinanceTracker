@@ -92,6 +92,34 @@ public interface TransactionControllerApi {
             @Valid @RequestBody TransactionRequest request
     );
 
+    @Operation(
+            summary = "Bulk create transactions",
+            description = "Imports a list of transactions in transactional or non-transactional mode."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+                responseCode = "201",
+                description = "Transactions created successfully",
+                content = @Content(
+                        array = @ArraySchema(schema = @Schema(implementation = TransactionResponse.class))
+                )),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Invalid request body",
+                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Account or tags not found",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/api/v1/transactions/bulk")
+    ResponseEntity<List<TransactionResponse>> createTransactionsBulk(
+            @Parameter(description = "List of transaction payloads", required = true)
+            @Valid @RequestBody List<@Valid TransactionRequest> requests,
+            @Parameter(description = "Run bulk import inside a transaction", example = "true")
+            @RequestParam(defaultValue = "true") boolean transactional
+    );
+
     @Operation(summary = "Patch transaction", description = "Partially updates a transaction.")
     @ApiResponses(value = {
         @ApiResponse(

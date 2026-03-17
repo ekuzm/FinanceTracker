@@ -1,0 +1,8 @@
+.gitignore
+.gitattributes
+README.md
+target
+logs
+config
+.vscode
+а 
