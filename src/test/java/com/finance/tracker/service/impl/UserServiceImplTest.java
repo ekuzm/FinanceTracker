@@ -68,7 +68,6 @@ class UserServiceImplTest {
             user.setId(10L);
             return user;
         });
-
         var response = service.createUser(request);
         assertEquals(10L, response.getId());
         assertEquals(List.of(1L), response.getAccountIds());
