@@ -70,7 +70,6 @@ class UserServiceImplTest {
         });
 
         var response = service.createUser(request);
-
         assertEquals(10L, response.getId());
         assertEquals(List.of(1L), response.getAccountIds());
         assertEquals(List.of(5L), response.getBudgetIds());
