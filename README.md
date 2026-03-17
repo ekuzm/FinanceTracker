@@ -121,3 +121,32 @@ docker compose down
 ## SonarQube Cloud
 
 [Sonar Analysis](https://sonarcloud.io/summary/new_code?id=ekuzm_FinanceTracker)
+
+Для передачи покрытия тестов в SonarQube Cloud проект настроен на генерацию JaCoCo XML-отчета в стандартный путь `target/site/jacoco/jacoco.xml`.
+
+GitHub Actions workflow находится в `.github/workflows/ci.yml` и выполняет:
+
+- сборку
+- линтинг через `checkstyle`
+- unit-тесты
+- генерацию JaCoCo coverage report
+- отправку анализа в SonarQube Cloud
+
+Для работы workflow в GitHub repository settings нужно задать:
+
+- secret `SONAR_TOKEN`
+- variable `SONAR_ORGANIZATION`, если organization key в SonarQube Cloud отличается от owner репозитория
+- variable `SONAR_PROJECT_KEY`, если нужно переопределить текущее значение по умолчанию `ekuzm_FinanceTracker`
+
+Локальный запуск с покрытием:
+
+```bash
+./mvnw -Pcoverage verify
+```
+
+Отправка анализа вместе с покрытием в SonarQube Cloud:
+
+```bash
+./mvnw -Pcoverage verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+  -Dsonar.token=$SONAR_TOKEN
+```
