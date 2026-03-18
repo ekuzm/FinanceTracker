@@ -18,7 +18,7 @@ public class ServiceLoggingAspect {
 
     private static final int SLOW_THRESHOLD_MS = 500;
     private static final int VERY_SLOW_THRESHOLD_MS = 1000;
-    private static final String ERROR_EXECUTING_METHOD = "Error executing method!";
+    private static final String ERROR_EXECUTING_METHOD = "Error executing method";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceLoggingAspect.class);
 
@@ -44,8 +44,7 @@ public class ServiceLoggingAspect {
 
             Object result = joinPoint.proceed();
 
-            stopWatch.stop();
-            long executionTime = stopWatch.getTotalTimeMillis();
+            long executionTime = stopAndGetExecutionTime(stopWatch);
 
             if (executionTime > VERY_SLOW_THRESHOLD_MS) {
                 LOGGER.warn("Method {} finished in {} ms (exceeds {} ms threshold)",
@@ -57,34 +56,16 @@ public class ServiceLoggingAspect {
             } else {
                 LOGGER.debug("Method {} finished in {} ms", fullMethodName, executionTime);
             }
-
             return result;
+        } catch (ApiException apiException) {
+            stopAndGetExecutionTime(stopWatch);
+            throw apiException;
         } catch (Exception exception) {
             long executionTime = stopAndGetExecutionTime(stopWatch);
-            if (exception instanceof ApiException apiException) {
-                logApiException(fullMethodName, executionTime, apiException);
-                throw apiException;
-            }
-            LOGGER.error("Method {} failed in {} ms", fullMethodName, executionTime, exception);
-            throw new LoggingException(ERROR_EXECUTING_METHOD + " " + fullMethodName, exception);
+            String message = "%s %s after %d ms"
+                    .formatted(ERROR_EXECUTING_METHOD, fullMethodName, executionTime);
+            throw new LoggingException(message, exception);
         }
-    }
-
-    private void logApiException(String fullMethodName, long executionTime, ApiException exception) {
-        int statusCode = exception.getStatus().value();
-        if (exception.getStatus().is5xxServerError()) {
-            LOGGER.error("Method {} failed in {} ms [{}]: {}",
-                    fullMethodName,
-                    executionTime,
-                    statusCode,
-                    exception.getMessage());
-            return;
-        }
-        LOGGER.warn("Method {} failed in {} ms [{}]: {}",
-                fullMethodName,
-                executionTime,
-                statusCode,
-                exception.getMessage());
     }
 
     private long stopAndGetExecutionTime(StopWatch stopWatch) {
