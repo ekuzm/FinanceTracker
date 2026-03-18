@@ -27,9 +27,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApiException(ApiException exception) {
         HttpStatus status = exception.getStatus();
-        if (status.is5xxServerError()) {
-            log.error("API exception", exception);
-        }
+        logApiException(status, exception);
         return ResponseEntity.status(status)
                 .body(buildErrorResponse(status, exception.getMessage()));
     }
@@ -42,6 +40,7 @@ public class GlobalExceptionHandler {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
 
+        log.warn("{}: {}", VALIDATION_FAILED, errors);
         return ResponseEntity.badRequest()
                 .body(buildValidationErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED, errors));
     }
@@ -51,6 +50,7 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException exception) {
         String message = "Invalid value '%s' for parameter '%s'"
                 .formatted(exception.getValue(), exception.getName());
+        log.warn("Method argument type mismatch: {}", message);
         return ResponseEntity.badRequest()
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
@@ -66,6 +66,7 @@ public class GlobalExceptionHandler {
             String fieldName = invalidFormatException.getPath().getFirst().getFieldName();
             message = "Invalid value for field '%s'".formatted(fieldName);
         }
+        log.warn("{}: {}", MALFORMED_JSON_REQUEST, message);
         return ResponseEntity.badRequest()
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
@@ -75,6 +76,14 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, UNEXPECTED_ERROR));
+    }
+
+    private void logApiException(HttpStatus status, ApiException exception) {
+        if (status.is5xxServerError()) {
+            log.error("API exception [{}]: {}", status.value(), exception.getMessage());
+            return;
+        }
+        log.warn("API exception [{}]: {}", status.value(), exception.getMessage());
     }
 
     private ErrorResponse buildErrorResponse(HttpStatus status, String message) {

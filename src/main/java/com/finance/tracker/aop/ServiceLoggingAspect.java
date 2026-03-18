@@ -60,10 +60,37 @@ public class ServiceLoggingAspect {
 
             return result;
         } catch (Exception exception) {
+            long executionTime = stopAndGetExecutionTime(stopWatch);
             if (exception instanceof ApiException apiException) {
+                logApiException(fullMethodName, executionTime, apiException);
                 throw apiException;
             }
+            LOGGER.error("Method {} failed in {} ms", fullMethodName, executionTime, exception);
             throw new LoggingException(ERROR_EXECUTING_METHOD + " " + fullMethodName, exception);
         }
+    }
+
+    private void logApiException(String fullMethodName, long executionTime, ApiException exception) {
+        int statusCode = exception.getStatus().value();
+        if (exception.getStatus().is5xxServerError()) {
+            LOGGER.error("Method {} failed in {} ms [{}]: {}",
+                    fullMethodName,
+                    executionTime,
+                    statusCode,
+                    exception.getMessage());
+            return;
+        }
+        LOGGER.warn("Method {} failed in {} ms [{}]: {}",
+                fullMethodName,
+                executionTime,
+                statusCode,
+                exception.getMessage());
+    }
+
+    private long stopAndGetExecutionTime(StopWatch stopWatch) {
+        if (stopWatch.isRunning()) {
+            stopWatch.stop();
+        }
+        return stopWatch.getTotalTimeMillis();
     }
 }

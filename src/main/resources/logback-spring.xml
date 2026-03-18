@@ -9,7 +9,7 @@
     <property name="LOG_FILE" value="${LOG_DIR}/${applicationName}.log"/>
     <property name="LOG_ARCHIVE" value="${LOG_DIR}/archive/${applicationName}.%d{yyyy-MM-dd}.%i.log.gz"/>
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n%ex"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
