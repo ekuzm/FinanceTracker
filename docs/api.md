@@ -600,6 +600,61 @@ Request:
   - баланс счета `1` станет `900.00`
   - в БД появится одна новая транзакция из bulk-запроса
 
+### `POST /api/v1/transactions/async`
+
+Асинхронно импортирует список транзакций.
+
+Query params:
+
+- `transactional` - optional, default `true`
+
+Request body совпадает с `POST /api/v1/transactions/bulk`.
+
+Ответ:
+
+```json
+{
+  "taskId": "6b82dd7c-71d7-49b6-9c94-2e59619e4c17"
+}
+```
+
+Поведение:
+
+- задача создаётся в памяти приложения
+- сразу возвращается `202 Accepted` и `taskId`
+- обработка выполняется через `@Async`
+- между элементами добавлена пауза, чтобы статус `IN_PROGRESS` можно было увидеть через отдельный запрос
+- при `transactional=true` импорт выполняется в одной транзакции
+- при `transactional=false` каждая успешно обработанная транзакция успевает сохраниться отдельно
+
+### `GET /api/v1/transactions/async/status/{taskId}`
+
+Возвращает текущий статус асинхронной задачи.
+
+Пример ответа:
+
+```json
+{
+  "taskId": "6b82dd7c-71d7-49b6-9c94-2e59619e4c17",
+  "status": "IN_PROGRESS",
+  "startTime": "2026-04-05T16:10:00",
+  "endTime": null,
+  "progress": 50,
+  "result": null
+}
+```
+
+Возможные статусы:
+
+- `PENDING`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `FAILED`
+
+### `GET /api/v1/transactions/async/tasks`
+
+Возвращает все асинхронные задачи, которые сейчас хранятся в памяти приложения.
+
 ### `PATCH /api/v1/transactions/{id}`
 
 Частично обновляет транзакцию.
@@ -633,3 +688,26 @@ Request:
 
 - при удалении баланс счета откатывается с учетом типа транзакции
 - другие сущности каскадно не удаляются
+
+## Race Condition Demo - `/api/v1/demo/race-condition`
+
+### `GET /api/v1/demo/race-condition/run`
+
+Запускает три сценария:
+
+- небезопасный счётчик
+- `synchronized` счётчик
+- `AtomicInteger` счётчик
+
+Во всех сценариях используется `ExecutorService` с `50` потоками и `1000` инкрементов на поток.
+
+Ответ:
+
+```json
+{
+  "message": "Демонстрация race condition запущена",
+  "status": "Проверьте логи для результатов"
+}
+```
+
+Результаты выводятся в логи приложения.

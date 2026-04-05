@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - /home/ekuzm/Programming/java/finance-tracker/logs:/app/logs
+      - /Users/egorkuzmenkov/Programming/java/FinanceTracker/logs:/app/logs
     networks:
       - finance-tracker-net
 

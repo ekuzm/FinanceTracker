@@ -22,7 +22,8 @@ public class ServiceLoggingAspect {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceLoggingAspect.class);
 
-    @Pointcut("within(@org.springframework.stereotype.Service *)")
+    @Pointcut("within(@org.springframework.stereotype.Service *)"
+            + " && !within(com.finance.tracker.service.impl.CounterServiceImpl)")
     public void serviceMethods() {
     }
 

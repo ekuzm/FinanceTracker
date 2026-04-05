@@ -35,3 +35,4 @@ build/
 .env
 application-secrets.properties
 logs/
+jmeter.log
