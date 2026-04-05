@@ -70,9 +70,11 @@ class AsyncTransactionServiceImplTest {
 
     @Test
     void createTransactionsAsyncShouldRejectEmptyRequests() {
+        List<TransactionRequest> requests = List.of();
+
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> service.createTransactionsAsync(List.of(), false));
+                () -> service.createTransactionsAsync(requests, false));
 
         assertTrue(exception.getMessage().contains("at least one item"));
         verifyNoInteractions(asyncTaskStorage, asyncTransactionExecutor);

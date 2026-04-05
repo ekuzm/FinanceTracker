@@ -91,6 +91,25 @@ class AsyncTransactionExecutorServiceTest {
     }
 
     @Test
+    void executeTransactionsCreationShouldCommitTransactionalImportAfterProcessingRequests() {
+        AsyncTask task = task("task-1");
+        when(asyncTaskStorage.getTask("task-1")).thenReturn(task);
+        when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+
+        CompletableFuture<Void> result =
+                service.executeTransactionsCreation("task-1", List.of(request("Coffee")), true);
+
+        assertTrue(result.isDone());
+        assertEquals(AsyncTaskStatus.COMPLETED, task.getStatus());
+        assertEquals(100, task.getProgress());
+        assertEquals("Created 1 transactions", task.getResult());
+        assertNotNull(task.getEndTime());
+        verify(transactionService).createTransaction(any(TransactionRequest.class));
+        verify(transactionManager).commit(any());
+        verify(transactionManager, never()).rollback(any());
+    }
+
+    @Test
     void executeTransactionsCreationShouldRollbackTransactionalImportOnFailure() {
         AsyncTask task = task("task-1");
         when(asyncTaskStorage.getTask("task-1")).thenReturn(task);
