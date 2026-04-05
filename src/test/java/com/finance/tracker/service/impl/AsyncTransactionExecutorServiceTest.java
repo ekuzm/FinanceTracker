@@ -74,6 +74,23 @@ class AsyncTransactionExecutorServiceTest {
     }
 
     @Test
+    void executeTransactionsCreationShouldCompleteNonTransactionalImportAfterProcessingRequests() {
+        AsyncTask task = task("task-1");
+        when(asyncTaskStorage.getTask("task-1")).thenReturn(task);
+
+        CompletableFuture<Void> result =
+                service.executeTransactionsCreation("task-1", List.of(request("Coffee")), false);
+
+        assertTrue(result.isDone());
+        assertEquals(AsyncTaskStatus.COMPLETED, task.getStatus());
+        assertEquals(100, task.getProgress());
+        assertEquals("Created 1 transactions", task.getResult());
+        assertNotNull(task.getEndTime());
+        verify(transactionService).createTransaction(any(TransactionRequest.class));
+        verifyNoInteractions(transactionManager);
+    }
+
+    @Test
     void executeTransactionsCreationShouldCommitEmptyTransactionalImport() {
         AsyncTask task = task("task-1");
         when(asyncTaskStorage.getTask("task-1")).thenReturn(task);
