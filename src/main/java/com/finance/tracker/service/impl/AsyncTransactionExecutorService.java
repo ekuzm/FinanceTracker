@@ -34,8 +34,8 @@ public class AsyncTransactionExecutorService {
         }
 
         task.setStatus(AsyncTaskStatus.IN_PROGRESS);
-
         try {
+            Thread.sleep(10000);
             if (transactional) {
                 executeTransactionalImport(task, requests);
             } else {

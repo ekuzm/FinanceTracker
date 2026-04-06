@@ -1,8 +1,7 @@
 package com.finance.tracker.controller;
 
+import com.finance.tracker.dto.response.RaceConditionDemoResponse;
 import com.finance.tracker.service.impl.RaceConditionDemoService;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,13 +16,7 @@ public class RaceConditionController {
     private final RaceConditionDemoService demoService;
 
     @GetMapping("/run")
-    public ResponseEntity<Map<String, String>> runRaceConditionDemo() throws InterruptedException {
-        demoService.runAllDemos();
-
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Race condition demonstration started");
-        response.put("status", "Check logs for results");
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<RaceConditionDemoResponse> runRaceConditionDemo() throws InterruptedException {
+        return ResponseEntity.ok(demoService.runAllDemos());
     }
 }

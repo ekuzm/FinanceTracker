@@ -103,12 +103,12 @@
     </TestPlan>
     <hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Main">
-        <intProp name="ThreadGroup.num_threads">1</intProp>
-        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <intProp name="ThreadGroup.num_threads">50</intProp>
+        <intProp name="ThreadGroup.ramp_time">5</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
-          <stringProp name="LoopController.loops">1</stringProp>
+          <stringProp name="LoopController.loops">5</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
@@ -145,7 +145,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;username&quot;:&quot;${baseUsername}&quot;,&quot;email&quot;:&quot;${baseEmail}&quot;}</stringProp>
+                <stringProp name="Argument.value">{&quot;username&quot;:&quot;perf_${__threadNum}_${__time(yyMMddHHmmssSSS,)}_${__Random(100,999,)}&quot;,&quot;email&quot;:&quot;perf_${__threadNum}_${__time(yyMMddHHmmssSSS,)}_${__Random(100,999,)}@example.com&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -339,7 +339,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;username&quot;:&quot;${baseUsername}_updated&quot;,&quot;email&quot;:&quot;${updatedEmail}&quot;}</stringProp>
+                <stringProp name="Argument.value">{&quot;username&quot;:&quot;upd_${__threadNum}_${__time(yyMMddHHmmssSSS,)}_${__Random(100,999,)}&quot;,&quot;email&quot;:&quot;upd_${__threadNum}_${__time(yyMMddHHmmssSSS,)}_${__Random(100,999,)}@example.com&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -354,7 +354,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;name&quot;:&quot;Tag ${uniqueSuffix}&quot;}</stringProp>
+                <stringProp name="Argument.value">{&quot;name&quot;:&quot;tag-${__UUID()}&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -395,7 +395,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;name&quot;:&quot;Tag Updated ${uniqueSuffix}&quot;}</stringProp>
+                <stringProp name="Argument.value">{&quot;name&quot;:&quot;tag-upd-${__UUID()}&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -646,6 +646,25 @@
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree/>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="First Thread Only Demo Error" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(ctx.getThread().getThreadName().endsWith(&apos;-1&apos;))}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">false</boolProp>
+        </IfController>
+        <hashTree>
+          <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="Run Demo Error Once" enabled="true"/>
+          <hashTree>
+            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="DEMO ERROR GET /users/-1" enabled="true">
+              <stringProp name="HTTPSampler.path">${basePath}/users/-1</stringProp>
+              <stringProp name="HTTPSampler.method">GET</stringProp>
+              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+                <collectionProp name="Arguments.arguments"/>
+              </elementProp>
+            </HTTPSamplerProxy>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
         <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>

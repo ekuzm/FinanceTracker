@@ -1,6 +1,7 @@
 package com.finance.tracker.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.finance.tracker.dto.response.RaceConditionDemoResponse;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.ExecutorService;
@@ -23,17 +25,57 @@ class RaceConditionDemoServiceTest {
     private final RaceConditionDemoService service = new RaceConditionDemoService();
 
     @Test
-    void runAllDemosShouldLogEachCounterScenario(CapturedOutput output) throws InterruptedException {
-        service.runAllDemos();
+    void runAllDemosShouldReturnStructuredAndExplicitResults(CapturedOutput output) throws InterruptedException {
+        RaceConditionDemoResponse response = service.runAllDemos();
 
         String logs = output.toString();
 
         assertTrue(logs.contains("Starting race condition demonstration with 50 threads"));
         assertTrue(logs.contains("Expected value: 50000"));
+        assertTrue(logs.contains("forced collision every 25 increments"));
+        assertTrue(logs.contains("Unsafe attempt 1"));
         assertTrue(logs.contains("Unsafe counter:"));
         assertTrue(logs.contains("Synchronized counter:"));
         assertTrue(logs.contains("Atomic counter:"));
-        assertTrue(logs.contains("Result: SUCCESS"));
+        assertTrue(logs.contains("Takeaway:"));
+
+        assertEquals(50, response.getThreadCount());
+        assertEquals(1000, response.getIncrementsPerThread());
+        assertEquals(50_000, response.getExpectedValue());
+        assertEquals(3, response.getUnsafeAttemptsCount());
+        assertEquals(25, response.getForcedCollisionInterval());
+        assertEquals(3, response.getUnsafeAttempts().size());
+        assertFalse(response.getUnsafeCounter().isMatchesExpected());
+        assertTrue(response.getUnsafeCounter().getLostUpdates() > 0);
+        assertTrue(response.getUnsafeAttempts().stream()
+                .anyMatch(RaceConditionDemoResponse.UnsafeAttempt::isRaceConditionPresent));
+        assertTrue(response.getSynchronizedCounter().isMatchesExpected());
+        assertTrue(response.getAtomicCounter().isMatchesExpected());
+    }
+
+    @Test
+    void demonstrateRaceConditionShouldClearlyLoseUpdates() throws InterruptedException {
+        RaceConditionDemoResponse.CounterResult result = service.demonstrateRaceCondition();
+
+        assertFalse(result.isMatchesExpected());
+        assertTrue(result.getLostUpdates() > 0);
+        assertEquals("RACE CONDITION OBSERVED", result.getVerdict());
+    }
+
+    @Test
+    void demonstrateSafeCountersShouldReachExpectedValue() throws InterruptedException {
+        RaceConditionDemoResponse.CounterResult synchronizedResult = service.demonstrateSynchronizedSolution();
+        RaceConditionDemoResponse.CounterResult atomicResult = service.demonstrateAtomicSolution();
+
+        assertEquals(50_000, synchronizedResult.getActualValue());
+        assertEquals(0, synchronizedResult.getLostUpdates());
+        assertTrue(synchronizedResult.isMatchesExpected());
+        assertEquals("SUCCESS", synchronizedResult.getVerdict());
+
+        assertEquals(50_000, atomicResult.getActualValue());
+        assertEquals(0, atomicResult.getLostUpdates());
+        assertTrue(atomicResult.isMatchesExpected());
+        assertEquals("SUCCESS", atomicResult.getVerdict());
     }
 
     @Test
@@ -75,34 +117,6 @@ class RaceConditionDemoServiceTest {
         } finally {
             Thread.interrupted();
         }
-    }
-
-    @Test
-    void logResultsShouldCoverUnsafeCounterOutcomes(CapturedOutput output) throws Exception {
-        Method logResultsMethod = privateMethod("logResults", String.class, int.class);
-
-        logResultsMethod.invoke(service, "Unsafe counter", 50_000);
-        logResultsMethod.invoke(service, "Unsafe counter", 49_999);
-
-        String logs = output.toString();
-
-        assertTrue(logs.contains("Lost updates: 0"));
-        assertTrue(logs.contains("Race condition: ABSENT"));
-        assertTrue(logs.contains("Lost updates: 1"));
-        assertTrue(logs.contains("Race condition: PRESENT"));
-    }
-
-    @Test
-    void logResultsShouldCoverSafeCounterOutcomes(CapturedOutput output) throws Exception {
-        Method logResultsMethod = privateMethod("logResults", String.class, int.class);
-
-        logResultsMethod.invoke(service, "Atomic counter", 50_000);
-        logResultsMethod.invoke(service, "Atomic counter", 49_999);
-
-        String logs = output.toString();
-
-        assertTrue(logs.contains("Result: SUCCESS"));
-        assertTrue(logs.contains("Result: FAILURE"));
     }
 
     private Method privateMethod(String name, Class<?>... parameterTypes) throws NoSuchMethodException {
