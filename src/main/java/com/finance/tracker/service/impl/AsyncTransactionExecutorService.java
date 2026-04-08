@@ -46,10 +46,11 @@ public class AsyncTransactionExecutorService {
             task.setEndTime(LocalDateTime.now());
             task.setProgress(100);
             task.setResult("Created " + requests.size() + " transactions");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            markTaskAsFailed(task, "Task was interrupted while waiting");
         } catch (Exception exception) {
-            task.setStatus(AsyncTaskStatus.FAILED);
-            task.setEndTime(LocalDateTime.now());
-            task.setResult("Error: " + exception.getMessage());
+            markTaskAsFailed(task, "Error: " + exception.getMessage());
         }
 
         return CompletableFuture.completedFuture(null);
@@ -81,10 +82,14 @@ public class AsyncTransactionExecutorService {
             Thread.sleep(2000);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            task.setStatus(AsyncTaskStatus.FAILED);
-            task.setEndTime(LocalDateTime.now());
-            task.setResult("Task was interrupted while waiting");
+            markTaskAsFailed(task, "Task was interrupted while waiting");
             throw new LoggingException("Async transaction import interrupted", exception);
         }
+    }
+
+    private void markTaskAsFailed(AsyncTask task, String result) {
+        task.setStatus(AsyncTaskStatus.FAILED);
+        task.setEndTime(LocalDateTime.now());
+        task.setResult(result);
     }
 }

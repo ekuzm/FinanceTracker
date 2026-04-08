@@ -158,10 +158,10 @@ class AsyncTransactionExecutorServiceTest {
 
             assertTrue(result.isDone());
             assertEquals(AsyncTaskStatus.FAILED, task.getStatus());
-            assertEquals("Error: Async transaction import interrupted", task.getResult());
+            assertEquals("Task was interrupted while waiting", task.getResult());
             assertNotNull(task.getEndTime());
             assertTrue(Thread.currentThread().isInterrupted());
-            verify(transactionService).createTransaction(any(TransactionRequest.class));
+            verifyNoInteractions(transactionService, transactionManager);
         } finally {
             Thread.interrupted();
         }
