@@ -1,7 +1,6 @@
 package com.finance.tracker.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,13 +16,8 @@ public class RaceConditionDemoResponse {
     private int threadCount;
     private int incrementsPerThread;
     private int expectedValue;
-    private int unsafeAttemptsCount;
-    private int forcedCollisionInterval;
     private CounterResult unsafeCounter;
-    private List<UnsafeAttempt> unsafeAttempts;
-    private CounterResult synchronizedCounter;
     private CounterResult atomicCounter;
-    private String takeaway;
 
     @Getter
     @Setter
@@ -37,18 +31,5 @@ public class RaceConditionDemoResponse {
         private int lostUpdates;
         private boolean matchesExpected;
         private String verdict;
-    }
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "One unsafe counter attempt captured during the demo.")
-    public static class UnsafeAttempt {
-
-        private int attempt;
-        private int actualValue;
-        private int lostUpdates;
-        private boolean raceConditionPresent;
     }
 }

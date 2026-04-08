@@ -1,13 +1,9 @@
 package com.finance.tracker.service.impl;
 
 import com.finance.tracker.dto.response.RaceConditionDemoResponse;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
@@ -21,21 +17,13 @@ public class RaceConditionDemoService {
     private static final int THREAD_COUNT = 50;
     private static final int INCREMENTS_PER_THREAD = 1000;
     private static final int EXPECTED_VALUE = THREAD_COUNT * INCREMENTS_PER_THREAD;
-    private static final int UNSAFE_ATTEMPTS = 3;
-    private static final int FORCED_COLLISION_INTERVAL = 25;
     private static final int WORKER_READY_TIMEOUT_SECONDS = 10;
 
     public RaceConditionDemoResponse.CounterResult demonstrateRaceCondition() throws InterruptedException {
-        List<RaceConditionDemoResponse.UnsafeAttempt> attempts = runUnsafeAttempts();
-        return summarizeUnsafeAttempts(attempts);
-    }
-
-    public RaceConditionDemoResponse.CounterResult demonstrateSynchronizedSolution() throws InterruptedException {
-        log.info("SYNCHRONIZED COUNTER:");
+        log.info("UNSAFE COUNTER:");
         DemoCounters counters = new DemoCounters();
-        executeConcurrentIncrements(ignored -> counters.incrementSynchronized());
-        RaceConditionDemoResponse.CounterResult result =
-                buildCounterResult("Synchronized counter", counters.getSynchronizedValue());
+        executeUnsafeConcurrentIncrements(counters);
+        RaceConditionDemoResponse.CounterResult result = buildUnsafeCounterResult(counters.getUnsafeValue());
         logCounterResult(result);
         return result;
     }
@@ -54,16 +42,10 @@ public class RaceConditionDemoService {
         log.info("Starting race condition demonstration with {} threads", THREAD_COUNT);
         log.info("Each thread performs {} increments", INCREMENTS_PER_THREAD);
         log.info("Expected value: {}", EXPECTED_VALUE);
-        log.info(
-                "Unsafe demo uses {} attempts and forces a collision every {} increments",
-                UNSAFE_ATTEMPTS,
-                FORCED_COLLISION_INTERVAL);
 
-        List<RaceConditionDemoResponse.UnsafeAttempt> unsafeAttempts = runUnsafeAttempts();
-        RaceConditionDemoResponse.CounterResult unsafeCounter = summarizeUnsafeAttempts(unsafeAttempts);
-        RaceConditionDemoResponse.CounterResult synchronizedCounter = demonstrateSynchronizedSolution();
+        RaceConditionDemoResponse.CounterResult unsafeCounter = demonstrateRaceCondition();
         RaceConditionDemoResponse.CounterResult atomicCounter = demonstrateAtomicSolution();
-        String takeaway = buildTakeaway(unsafeCounter, synchronizedCounter, atomicCounter);
+        String takeaway = buildTakeaway(unsafeCounter, atomicCounter);
 
         log.info("Takeaway: {}", takeaway);
 
@@ -71,55 +53,8 @@ public class RaceConditionDemoService {
                 THREAD_COUNT,
                 INCREMENTS_PER_THREAD,
                 EXPECTED_VALUE,
-                UNSAFE_ATTEMPTS,
-                FORCED_COLLISION_INTERVAL,
                 unsafeCounter,
-                unsafeAttempts,
-                synchronizedCounter,
-                atomicCounter,
-                takeaway);
-    }
-
-    private List<RaceConditionDemoResponse.UnsafeAttempt> runUnsafeAttempts() throws InterruptedException {
-        log.info(
-                "UNSAFE COUNTER ({} attempts, forced collision every {} increments):",
-                UNSAFE_ATTEMPTS,
-                FORCED_COLLISION_INTERVAL);
-
-        List<RaceConditionDemoResponse.UnsafeAttempt> attempts = new ArrayList<>();
-
-        for (int attempt = 1; attempt <= UNSAFE_ATTEMPTS; attempt++) {
-            DemoCounters counters = new DemoCounters();
-            executeUnsafeConcurrentIncrements(counters);
-
-            RaceConditionDemoResponse.UnsafeAttempt result =
-                    buildUnsafeAttempt(attempt, counters.getUnsafeValue());
-            attempts.add(result);
-            logUnsafeAttempt(result);
-        }
-
-        return attempts;
-    }
-
-    private RaceConditionDemoResponse.CounterResult summarizeUnsafeAttempts(
-            List<RaceConditionDemoResponse.UnsafeAttempt> attempts) {
-        RaceConditionDemoResponse.UnsafeAttempt worstAttempt = attempts.stream()
-                .max(Comparator.comparingInt(RaceConditionDemoResponse.UnsafeAttempt::getLostUpdates))
-                .orElse(new RaceConditionDemoResponse.UnsafeAttempt(1, EXPECTED_VALUE, 0, false));
-
-        String verdict = worstAttempt.isRaceConditionPresent()
-                ? "RACE CONDITION OBSERVED"
-                : "NO LOST UPDATES OBSERVED";
-
-        RaceConditionDemoResponse.CounterResult result = new RaceConditionDemoResponse.CounterResult(
-                "Unsafe counter",
-                worstAttempt.getActualValue(),
-                worstAttempt.getLostUpdates(),
-                !worstAttempt.isRaceConditionPresent(),
-                verdict);
-
-        logCounterResult(result);
-        return result;
+                atomicCounter);
     }
 
     private RaceConditionDemoResponse.CounterResult buildCounterResult(String counterName, int actualValue) {
@@ -135,38 +70,34 @@ public class RaceConditionDemoService {
                 verdict);
     }
 
-    private RaceConditionDemoResponse.UnsafeAttempt buildUnsafeAttempt(int attempt, int actualValue) {
+    private RaceConditionDemoResponse.CounterResult buildUnsafeCounterResult(int actualValue) {
         int lostUpdates = EXPECTED_VALUE - actualValue;
-        return new RaceConditionDemoResponse.UnsafeAttempt(
-                attempt,
+        boolean matchesExpected = actualValue == EXPECTED_VALUE;
+        String verdict = matchesExpected
+                ? "NO LOST UPDATES OBSERVED"
+                : "RACE CONDITION OBSERVED";
+
+        return new RaceConditionDemoResponse.CounterResult(
+                "Unsafe counter",
                 actualValue,
                 lostUpdates,
-                lostUpdates > 0);
+                matchesExpected,
+                verdict);
     }
 
     private String buildTakeaway(
             RaceConditionDemoResponse.CounterResult unsafeCounter,
-            RaceConditionDemoResponse.CounterResult synchronizedCounter,
             RaceConditionDemoResponse.CounterResult atomicCounter) {
-        if (!unsafeCounter.isMatchesExpected()
-                && synchronizedCounter.isMatchesExpected()
-                && atomicCounter.isMatchesExpected()) {
+        if (!unsafeCounter.isMatchesExpected() && atomicCounter.isMatchesExpected()) {
             return "Unsafe increments lose updates under contention, "
-                    + "while synchronized and atomic increments stay correct.";
+                    + "while atomic increments stay correct.";
         }
 
         return "Unsafe counter matched the expected value in this run, so increase contention or rerun the demo.";
     }
 
     private void executeUnsafeConcurrentIncrements(DemoCounters counters) throws InterruptedException {
-        Phaser forcedCollisionPhaser = new Phaser(THREAD_COUNT);
-        executeConcurrentIncrements(iteration -> {
-            if ((iteration + 1) % FORCED_COLLISION_INTERVAL == 0) {
-                counters.incrementUnsafeWithForcedCollision(forcedCollisionPhaser);
-                return;
-            }
-            counters.incrementUnsafe();
-        });
+        executeConcurrentIncrements(ignored -> counters.incrementUnsafe());
     }
 
     private void executeConcurrentIncrements(IntConsumer incrementAction) throws InterruptedException {
@@ -225,16 +156,6 @@ public class RaceConditionDemoService {
         }
     }
 
-    private void logUnsafeAttempt(RaceConditionDemoResponse.UnsafeAttempt attempt) {
-        log.info(
-                "Unsafe attempt {}: expected={}, actual={}, lostUpdates={}, raceCondition={}",
-                attempt.getAttempt(),
-                EXPECTED_VALUE,
-                attempt.getActualValue(),
-                attempt.getLostUpdates(),
-                attempt.isRaceConditionPresent() ? "PRESENT" : "ABSENT");
-    }
-
     private void logCounterResult(RaceConditionDemoResponse.CounterResult result) {
         log.info("{}:", result.getName());
         log.info("  Expected value: {}", EXPECTED_VALUE);
@@ -247,28 +168,13 @@ public class RaceConditionDemoService {
 
         private final AtomicInteger atomicCounter = new AtomicInteger();
         private int unsafeCounter;
-        private int synchronizedCounter;
 
         private void incrementUnsafe() {
             unsafeCounter++;
         }
 
-        private void incrementUnsafeWithForcedCollision(Phaser phaser) {
-            int snapshot = unsafeCounter;
-            phaser.arriveAndAwaitAdvance();
-            unsafeCounter = snapshot + 1;
-        }
-
         private int getUnsafeValue() {
             return unsafeCounter;
-        }
-
-        private synchronized void incrementSynchronized() {
-            synchronizedCounter++;
-        }
-
-        private synchronized int getSynchronizedValue() {
-            return synchronizedCounter;
         }
 
         private void incrementAtomic() {

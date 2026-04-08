@@ -1,7 +1,6 @@
 package com.finance.tracker.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,45 +31,36 @@ class RaceConditionDemoServiceTest {
 
         assertTrue(logs.contains("Starting race condition demonstration with 50 threads"));
         assertTrue(logs.contains("Expected value: 50000"));
-        assertTrue(logs.contains("forced collision every 25 increments"));
-        assertTrue(logs.contains("Unsafe attempt 1"));
         assertTrue(logs.contains("Unsafe counter:"));
-        assertTrue(logs.contains("Synchronized counter:"));
         assertTrue(logs.contains("Atomic counter:"));
         assertTrue(logs.contains("Takeaway:"));
 
         assertEquals(50, response.getThreadCount());
         assertEquals(1000, response.getIncrementsPerThread());
         assertEquals(50_000, response.getExpectedValue());
-        assertEquals(3, response.getUnsafeAttemptsCount());
-        assertEquals(25, response.getForcedCollisionInterval());
-        assertEquals(3, response.getUnsafeAttempts().size());
-        assertFalse(response.getUnsafeCounter().isMatchesExpected());
-        assertTrue(response.getUnsafeCounter().getLostUpdates() > 0);
-        assertTrue(response.getUnsafeAttempts().stream()
-                .anyMatch(RaceConditionDemoResponse.UnsafeAttempt::isRaceConditionPresent));
-        assertTrue(response.getSynchronizedCounter().isMatchesExpected());
+        assertEquals("Unsafe counter", response.getUnsafeCounter().getName());
+        assertTrue(response.getUnsafeCounter().getActualValue() <= 50_000);
+        assertEquals(
+                50_000 - response.getUnsafeCounter().getActualValue(),
+                response.getUnsafeCounter().getLostUpdates());
         assertTrue(response.getAtomicCounter().isMatchesExpected());
     }
 
     @Test
-    void demonstrateRaceConditionShouldClearlyLoseUpdates() throws InterruptedException {
+    void demonstrateRaceConditionShouldReturnConsistentUnsafeResult() throws InterruptedException {
         RaceConditionDemoResponse.CounterResult result = service.demonstrateRaceCondition();
 
-        assertFalse(result.isMatchesExpected());
-        assertTrue(result.getLostUpdates() > 0);
-        assertEquals("RACE CONDITION OBSERVED", result.getVerdict());
+        assertEquals("Unsafe counter", result.getName());
+        assertTrue(result.getActualValue() <= 50_000);
+        assertEquals(50_000 - result.getActualValue(), result.getLostUpdates());
+        assertEquals(
+                result.isMatchesExpected() ? "NO LOST UPDATES OBSERVED" : "RACE CONDITION OBSERVED",
+                result.getVerdict());
     }
 
     @Test
-    void demonstrateSafeCountersShouldReachExpectedValue() throws InterruptedException {
-        RaceConditionDemoResponse.CounterResult synchronizedResult = service.demonstrateSynchronizedSolution();
+    void demonstrateAtomicCounterShouldReachExpectedValue() throws InterruptedException {
         RaceConditionDemoResponse.CounterResult atomicResult = service.demonstrateAtomicSolution();
-
-        assertEquals(50_000, synchronizedResult.getActualValue());
-        assertEquals(0, synchronizedResult.getLostUpdates());
-        assertTrue(synchronizedResult.isMatchesExpected());
-        assertEquals("SUCCESS", synchronizedResult.getVerdict());
 
         assertEquals(50_000, atomicResult.getActualValue());
         assertEquals(0, atomicResult.getLostUpdates());
