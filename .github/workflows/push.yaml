@@ -31,6 +31,8 @@ jobs:
                   docker buildx build \
                     --no-cache \
                     --push \
+                    --provenance=false \
+                    --sbom=false \
                     --tag $IMAGE_REGISTRY/$BACKEND_NAME:$TAG_NAME \
                     --tag $IMAGE_REGISTRY/$BACKEND_NAME:latest \
                     --file Dockerfile \
@@ -42,6 +44,8 @@ jobs:
                   docker buildx build \
                     --no-cache \
                     --push \
+                    --provenance=false \
+                    --sbom=false \
                     --tag $IMAGE_REGISTRY/$FRONTEND_NAME:$TAG_NAME \
                     --tag $IMAGE_REGISTRY/$FRONTEND_NAME:latest \
                     --file ./frontend/Dockerfile \
