@@ -20,13 +20,16 @@ jobs:
     if: github.event_name == 'push'
     needs: [call-workflow-test]
     uses: ./.github/workflows/push.yaml
+    secrets: inherit
 
   call-workflow-deploy:
     if: github.event_name == 'push'
     needs: [call-workflow-push]
     uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
 
   call-workflow-health-check:
     if: github.event_name == 'push'
     needs: [call-workflow-deploy]
     uses: ./.github/workflows/health.yaml
+    secrets: inherit
