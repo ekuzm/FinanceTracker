@@ -4,6 +4,40 @@
 
 **Стек:** Java 21, Spring Boot 4.0.3, Spring Web MVC, Spring Data JPA, PostgreSQL, Liquibase, springdoc-openapi.
 
+## Frontend
+
+В проект добавлен отдельный SPA-фронтенд на `Vue 3 + Vite + TypeScript` в директории [frontend](frontend).
+
+Что умеет интерфейс:
+
+- overview-дашборд с net worth, income/expense, savings rate и оперативными карточками
+- управление `users`, `accounts`, `budgets`, `tags`, `transactions`
+- фильтрация транзакций по диапазону дат и `withEntityGraph`
+- переводы между счетами с флагами `transactional` и `failAfterDebit`
+- bulk-импорт транзакций и async-импорт с мониторингом задач
+- бюджетная аналитика на основе расходов пользователя в периоде бюджета
+- поиск пользователей через JPQL/native endpoint'ы
+- запуск race-condition demo и просмотр результата
+- экспорт текущего workspace snapshot в JSON
+
+### Запуск Frontend
+
+1. Убедитесь, что установлен Node.js 20+.
+2. Запустите backend на `http://localhost:8080`.
+3. В отдельном терминале перейдите в `frontend`:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+4. Откройте приложение по адресу `http://localhost:5173`.
+
+По умолчанию dev-server использует Vite proxy на `http://localhost:8080`, поэтому поле `Backend base URL` можно оставить пустым.
+
+Если backend доступен по другому адресу, введите его в UI, например `http://localhost:8080`.
+
 ## Что умеет сервис
 
 - CRUD для `users`, `accounts`, `budgets`, `tags`, `transactions`
@@ -118,6 +152,19 @@ docker compose up -d --build
 
 - API: `http://localhost:8080`
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Frontend: `http://localhost:5173`
+
+`docker-compose.yaml` теперь поднимает отдельный сервис `finance-tracker-frontend`, который:
+
+- собирает Vue-приложение
+- раздаёт его через `nginx`
+- проксирует `/api`, `/v3` и `/swagger-ui` в контейнер `finance-tracker`
+
+Если хотите сменить порт фронта, добавьте в `.env`:
+
+```env
+FRONTEND_PORT=5173
+```
 
 Остановка:
 
@@ -134,4 +181,3 @@ docker compose down
 ## SonarQube Cloud
 
 [Sonar Analysis](https://sonarcloud.io/summary/new_code?id=ekuzm_FinanceTracker)
-

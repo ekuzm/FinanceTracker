@@ -36,3 +36,5 @@ build/
 application-secrets.properties
 logs/
 jmeter.log
+frontend/node_modules/
+frontend/dist/

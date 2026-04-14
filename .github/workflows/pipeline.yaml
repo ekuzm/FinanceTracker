@@ -1,0 +1,32 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  call-workflow-build:
+    uses: ./.github/workflows/ci/build.yaml
+  
+  call-workflow-lint:
+    needs: [call-workflow-build]
+    uses: ./.github/workflows/ci/lint.yaml
+  
+  call-workflow-test:
+    needs: [call-workflow-lint]
+    uses: ./.github/workflows/ci/test.yaml
+  
+  call-workflow-push:
+    if: github.event_name == 'push'
+    needs: [call-workflow-test]
+    uses: ./.github/workflows/cd/push.yaml
+
+  call-workflow-deploy:
+    if: github.event_name == 'push'
+    needs: [call-workflow-push]
+    uses: ./.github/workflows/cd/deploy.yaml
+
+  call-workflow-health-check:
+    if: github.event_name == 'push'
+    needs: [call-workflow-deploy]
+    uses: ./.github/workflows/cd/health.yaml
