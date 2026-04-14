@@ -6,27 +6,27 @@ on:
 
 jobs:
   call-workflow-build:
-    uses: ./.github/workflows/ci/build.yaml
+    uses: ./.github/workflows/build.yaml
   
   call-workflow-lint:
     needs: [call-workflow-build]
-    uses: ./.github/workflows/ci/lint.yaml
+    uses: ./.github/workflows/lint.yaml
   
   call-workflow-test:
     needs: [call-workflow-lint]
-    uses: ./.github/workflows/ci/test.yaml
+    uses: ./.github/workflows/test.yaml
   
   call-workflow-push:
     if: github.event_name == 'push'
     needs: [call-workflow-test]
-    uses: ./.github/workflows/cd/push.yaml
+    uses: ./.github/workflows/push.yaml
 
   call-workflow-deploy:
     if: github.event_name == 'push'
     needs: [call-workflow-push]
-    uses: ./.github/workflows/cd/deploy.yaml
+    uses: ./.github/workflows/deploy.yaml
 
   call-workflow-health-check:
     if: github.event_name == 'push'
     needs: [call-workflow-deploy]
-    uses: ./.github/workflows/cd/health.yaml
+    uses: ./.github/workflows/health.yaml
