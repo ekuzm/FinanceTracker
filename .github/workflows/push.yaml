@@ -10,7 +10,7 @@ jobs:
         timeout-minutes: 30
 
         env:
-            REGISTRY: "cr.selcloud.ru/finance-tracker"
+            REGISTRY: "cr.selcloud.ru"
             BACKEND_NAME: "finance-tracker-backend"
             FRONTEND_NAME: "finance-tracker-frontend"
 
