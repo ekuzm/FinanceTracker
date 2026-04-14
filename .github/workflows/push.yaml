@@ -26,11 +26,10 @@ jobs:
 
             - name: Build and push backend image
               run: |
-                  TAG_NAME=$(echo $GITHUB_SHA | head -c7)
                   docker buildx build \
                     --no-cache \
                     --push \
-                    --tag $REGISTRY/$BACKEND_NAME:$TAG_NAME \
+                    --tag $REGISTRY/$BACKEND_NAME:latest \
                     --file Dockerfile \
                     .
 
@@ -40,6 +39,6 @@ jobs:
                   docker buildx build \
                     --no-cache \
                     --push \
-                    --tag $REGISTRY/$FRONTEND_NAME:$TAG_NAME \
+                    --tag $REGISTRY/$FRONTEND_NAME:latest \
                     --file ./frontend/Dockerfile \
                     ./frontend
