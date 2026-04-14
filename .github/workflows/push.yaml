@@ -28,25 +28,20 @@ jobs:
             - name: Build and push backend image
               run: |
                   TAG_NAME=$(echo $GITHUB_SHA | head -c7)
+                  docker buildx create --use
                   docker buildx build \
                     --no-cache \
                     --push \
-                    --provenance=false \
-                    --sbom=false \
                     --tag $IMAGE_REGISTRY/$BACKEND_NAME:$TAG_NAME \
-                    --tag $IMAGE_REGISTRY/$BACKEND_NAME:latest \
                     --file Dockerfile \
                     .
 
             - name: Build and push frontend image
               run: |
                   TAG_NAME=$(echo $GITHUB_SHA | head -c7)
+                  docker buildx create --use
                   docker buildx build \
                     --no-cache \
-                    --push \
-                    --provenance=false \
-                    --sbom=false \
                     --tag $IMAGE_REGISTRY/$FRONTEND_NAME:$TAG_NAME \
-                    --tag $IMAGE_REGISTRY/$FRONTEND_NAME:latest \
                     --file ./frontend/Dockerfile \
                     ./frontend
