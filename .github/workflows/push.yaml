@@ -10,7 +10,8 @@ jobs:
         timeout-minutes: 30
 
         env:
-            REGISTRY: "cr.selcloud.ru"
+            REGISTRY_HOST: "cr.selcloud.ru"
+            IMAGE_REGISTRY: "cr.selcloud.ru/finance-tracker"
             BACKEND_NAME: "finance-tracker-backend"
             FRONTEND_NAME: "finance-tracker-frontend"
 
@@ -22,7 +23,7 @@ jobs:
               uses: docker/setup-buildx-action@v3
 
             - name: Login to Docker Registry
-              run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY
+              run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY_HOST
 
             - name: Build and push backend image
               run: |
@@ -30,8 +31,8 @@ jobs:
                   docker buildx build \
                     --no-cache \
                     --push \
-                    --tag $REGISTRY/$BACKEND_NAME:$TAG_NAME \
-                    --tag $REGISTRY/$BACKEND_NAME:latest \
+                    --tag $IMAGE_REGISTRY/$BACKEND_NAME:$TAG_NAME \
+                    --tag $IMAGE_REGISTRY/$BACKEND_NAME:latest \
                     --file Dockerfile \
                     .
 
@@ -41,7 +42,7 @@ jobs:
                   docker buildx build \
                     --no-cache \
                     --push \
-                    --tag $REGISTRY/$FRONTEND_NAME:$TAG_NAME \
-                    --tag $REGISTRY/$FRONTEND_NAME:latest \
+                    --tag $IMAGE_REGISTRY/$FRONTEND_NAME:$TAG_NAME \
+                    --tag $IMAGE_REGISTRY/$FRONTEND_NAME:latest \
                     --file ./frontend/Dockerfile \
                     ./frontend
