@@ -214,7 +214,7 @@ import BaseModal from '@/components/BaseModal.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useFinanceTracker } from '@/composables/useFinanceTracker';
 import { useRouteQueryState } from '@/composables/useRouteQueryState';
-import type { AccountType, BudgetResponse, UserRequest, UserResponse } from '@/types/api';
+import type { AccountResponse, AccountType, BudgetResponse, UserRequest, UserResponse } from '@/types/api';
 import FiltersToolbar from '@/widgets/FiltersToolbar.vue';
 
 const budgetOptionsQuery = {
@@ -259,7 +259,7 @@ const userForm = reactive<UserRequest>({
 });
 
 onMounted(() => {
-  void Promise.all([loadAccounts(), loadBudgets(budgetOptionsQuery)]);
+  void Promise.all([loadUsers({ mode: 'all' }), loadAccounts(), loadBudgets(budgetOptionsQuery)]);
 });
 
 const parsedMinBudgetLimit = computed<number | null>(() => {
@@ -295,17 +295,28 @@ const needsSearchParams = computed(
 
 const searchParamsNotice = computed(() => {
   if (budgetRangeInvalid.value) {
-    return 'Min budget cannot be greater than max budget.';
+    return 'Min budget cannot be greater than max budget. Showing all users until the range is fixed.';
   }
 
   if (!filters.accountType) {
-    return 'Choose account type to run JPQL or native search.';
+    return 'Choose account type to run JPQL or native search. Showing all users for now.';
   }
 
-  return 'Fill both budget limits to run JPQL or native search.';
+  return 'Fill both budget limits to run JPQL or native search. Showing all users for now.';
 });
 
 const budgetOptions = computed<BudgetResponse[]>(() => budgets.value);
+
+const accountsByUserId = computed<Record<number, AccountResponse[]>>(() =>
+  accounts.value.reduce<Record<number, AccountResponse[]>>((accumulator, account) => {
+    if (!accumulator[account.userId]) {
+      accumulator[account.userId] = [];
+    }
+
+    accumulator[account.userId].push(account);
+    return accumulator;
+  }, {}),
+);
 
 const budgetsByUserId = computed<Record<number, BudgetResponse[]>>(() =>
   budgetOptions.value.reduce<Record<number, BudgetResponse[]>>((accumulator, budget) => {
@@ -330,31 +341,34 @@ watch(
       return;
     }
 
-    if (!needsSearchParams.value) {
-      void loadUsers({
-        mode: filters.mode as 'jpql' | 'native',
-        accountType: filters.accountType as AccountType,
-        minBudgetLimit: filters.minBudgetLimit,
-        maxBudgetLimit: filters.maxBudgetLimit,
-      });
+    if (needsSearchParams.value) {
+      void loadUsers({ mode: 'all' });
+      return;
     }
+
+    void loadUsers({
+      mode: filters.mode as 'jpql' | 'native',
+      accountType: filters.accountType as AccountType,
+      minBudgetLimit: filters.minBudgetLimit,
+      maxBudgetLimit: filters.maxBudgetLimit,
+    });
   },
   { immediate: true },
 );
 
 const displayedUsers = computed(() => {
-  if (filters.mode !== 'all' && needsSearchParams.value) {
-    return [];
-  }
-
-  if (budgetRangeInvalid.value) {
-    return [];
-  }
-
   const search = filters.search.trim().toLowerCase();
   return users.value.filter((user) => {
+    const isAllMode = filters.mode === 'all';
+    const userAccounts = accountsByUserId.value[user.id] ?? [];
     const userBudgets = budgetsByUserId.value[user.id] ?? [];
+    const matchesAccountType =
+      !isAllMode ||
+      !filters.accountType ||
+      userAccounts.some((account) => account.type === filters.accountType);
     const matchesBudgetRange =
+      !isAllMode ||
+      budgetRangeInvalid.value ||
       (parsedMinBudgetLimit.value == null && parsedMaxBudgetLimit.value == null) ||
       userBudgets.some((budget) => {
         if (parsedMinBudgetLimit.value != null && budget.limitAmount < parsedMinBudgetLimit.value) {
@@ -369,10 +383,11 @@ const displayedUsers = computed(() => {
       });
 
     if (!search) {
-      return matchesBudgetRange;
+      return matchesAccountType && matchesBudgetRange;
     }
 
     return (
+      matchesAccountType &&
       matchesBudgetRange &&
       (
         user.username.toLowerCase().includes(search) ||
